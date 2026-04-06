@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { useChatStore, type Conversation } from '../store/chat'
 import { useConversations } from '../hooks/useConversations'
-import { getDeviceId } from '../lib/device'
+import { useAuth } from '../contexts/AuthContext'
 
 const API_URL = '/api'
 
@@ -41,9 +43,11 @@ function groupConversations(conversations: Conversation[]) {
 }
 
 /** 대화 내용을 디버깅용 텍스트로 변환 — 가능한 모든 정보 포함 */
-async function copyDebugLog(conv: Conversation) {
+async function copyDebugLog(conv: Conversation, userEmail?: string, token?: string | null) {
   try {
-    const res = await fetch(`${API_URL}/conversations/${conv.id}/messages`)
+    const res = await fetch(`${API_URL}/conversations/${conv.id}/messages`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
     const { messages } = await res.json()
 
     const store = useChatStore.getState()
@@ -59,7 +63,7 @@ async function copyDebugLog(conv: Conversation) {
       `- Title: ${conv.title || '없음'}`,
       `- Created: ${conv.created_at}`,
       `- Updated: ${conv.updated_at}`,
-      `- Device: ${getDeviceId()}`,
+      `- User: ${userEmail || 'unknown'}`,
       `- Active: ${store.activeConversationId === conv.id}`,
       `- Processing: ${store.processingConversationId === conv.id}`,
       ``,
@@ -129,8 +133,19 @@ async function copyDebugLog(conv: Conversation) {
 
 export function Sidebar() {
   const { sidebarOpen, activeConversationId } = useChatStore()
-  const { conversations, selectConversation, startNewChat } = useConversations()
+  const { conversations, selectConversation, deleteConversation, startNewChat } = useConversations()
+  const navigate = useNavigate()
   const groups = groupConversations(conversations)
+
+  const handleSelect = (convId: string) => {
+    selectConversation(convId)
+    navigate(`/chat/${convId}`)
+  }
+
+  const handleNewChat = () => {
+    startNewChat()
+    navigate('/', { replace: true })
+  }
 
   return (
     <AnimatePresence>
@@ -145,7 +160,7 @@ export function Sidebar() {
         >
           <div className="p-3">
             <button
-              onClick={startNewChat}
+              onClick={handleNewChat}
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors cursor-pointer"
               style={{ color: 'var(--text-secondary)', background: 'var(--bg-hover)', border: '1px solid var(--border-secondary)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-active)'; e.currentTarget.style.borderColor = 'var(--border-hover)' }}
@@ -175,7 +190,8 @@ export function Sidebar() {
                     key={conv.id}
                     conv={conv}
                     isActive={activeConversationId === conv.id}
-                    onSelect={() => selectConversation(conv.id)}
+                    onSelect={() => handleSelect(conv.id)}
+                    onDelete={() => deleteConversation(conv.id)}
                   />
                 ))}
               </div>
@@ -187,9 +203,10 @@ export function Sidebar() {
   )
 }
 
-function ConversationItem({ conv, isActive, onSelect }: { conv: Conversation; isActive: boolean; onSelect: () => void }) {
+function ConversationItem({ conv, isActive, onSelect, onDelete }: { conv: Conversation; isActive: boolean; onSelect: () => void; onDelete: () => void }) {
+  const { user, token: authToken } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // 바깥 클릭 시 메뉴 닫기
@@ -198,6 +215,7 @@ function ConversationItem({ conv, isActive, onSelect }: { conv: Conversation; is
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false)
+        setConfirmDelete(false)
       }
     }
     document.addEventListener('mousedown', handler)
@@ -206,10 +224,12 @@ function ConversationItem({ conv, isActive, onSelect }: { conv: Conversation; is
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    const ok = await copyDebugLog(conv)
+    const ok = await copyDebugLog(conv, user?.email, authToken)
     if (ok) {
-      setCopied(true)
-      setTimeout(() => { setCopied(false); setMenuOpen(false) }, 1200)
+      toast.success('디버그 로그가 클립보드에 복사됐어요')
+      setMenuOpen(false)
+    } else {
+      toast.error('복사에 실패했어요')
     }
   }
 
@@ -278,27 +298,53 @@ function ConversationItem({ conv, isActive, onSelect }: { conv: Conversation; is
             <button
               onClick={handleCopy}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors cursor-pointer"
-              style={{ color: copied ? 'var(--accent-emerald)' : 'var(--text-secondary)' }}
+              style={{ color: 'var(--text-secondary)' }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
-              {copied ? (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <path d="M13.5 4.5L6 12l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  복사됨
-                </>
-              ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <path d="M4 4V2.5A1.5 1.5 0 015.5 1h7A1.5 1.5 0 0114 2.5v7a1.5 1.5 0 01-1.5 1.5H11" stroke="currentColor" strokeWidth="1.3" />
-                    <rect x="1.5" y="5.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-                  </svg>
-                  디버그 로그 복사
-                </>
-              )}
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M4 4V2.5A1.5 1.5 0 015.5 1h7A1.5 1.5 0 0114 2.5v7a1.5 1.5 0 01-1.5 1.5H11" stroke="currentColor" strokeWidth="1.3" />
+                <rect x="1.5" y="5.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+              </svg>
+              디버그 로그 복사
             </button>
+
+            <div style={{ borderTop: '1px solid var(--border-secondary)', margin: '2px 0' }} />
+
+            {confirmDelete ? (
+              <div className="px-3 py-1.5">
+                <div className="text-[11px] mb-1.5" style={{ color: 'var(--text-tertiary)' }}>삭제하시겠어요?</div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(); setMenuOpen(false); setConfirmDelete(false) }}
+                    className="flex-1 text-[11px] py-1 rounded-md cursor-pointer"
+                    style={{ background: 'var(--accent-red)', color: '#fff' }}
+                  >
+                    삭제
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false) }}
+                    className="flex-1 text-[11px] py-1 rounded-md cursor-pointer"
+                    style={{ border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }}
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true) }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors cursor-pointer"
+                style={{ color: 'var(--accent-red)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4h12M5.5 4V2.5a1 1 0 011-1h3a1 1 0 011 1V4M6.5 7v5M9.5 7v5M3.5 4l.5 9.5a1.5 1.5 0 001.5 1.5h5a1.5 1.5 0 001.5-1.5L12.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                대화 삭제
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
