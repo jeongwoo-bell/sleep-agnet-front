@@ -21,6 +21,9 @@ interface Props {
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({ onSend }, ref) {
+  // 이미지 기능 비활성화 — 추후 활성화 시 false로 변경
+  const IMAGE_DISABLED = true
+
   const [value, setValue] = useState('')
   const [images, setImages] = useState<ImageAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -30,6 +33,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const isProcessing = useChatStore((s) => s.isProcessing)
 
   const addImages = useCallback(async (files: File[]) => {
+    if (IMAGE_DISABLED) return
     setError(null)
     const newImages: ImageAttachment[] = []
 
@@ -75,7 +79,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim()
     if ((!trimmed && images.length === 0) || isProcessing) return
-    onSend(trimmed || '이미지를 분석해주세요', undefined, images.length > 0 ? images : undefined)
+    onSend(trimmed, undefined, images.length > 0 ? images : undefined)
     setValue('')
     images.forEach((img) => URL.revokeObjectURL(img.preview))
     setImages([])
@@ -229,21 +233,23 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       />
 
       <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessing}
-          className="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
-          style={{ color: 'var(--text-tertiary)' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          title="이미지 첨부"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
-            <path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        {!IMAGE_DISABLED && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            className="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
+            style={{ color: 'var(--text-tertiary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            title="이미지 첨부"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+              <path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
         <input
           ref={fileInputRef}
           type="file"
