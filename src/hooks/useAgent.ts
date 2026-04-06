@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { useChatStore, type ProgressStep } from '../store/chat'
-import { getDeviceId } from '../lib/device'
+import { useAuth } from '../contexts/AuthContext'
 import type { ImageAttachment } from '../components/ChatInput'
 
 const API_URL = '/api'
@@ -22,6 +22,7 @@ const STEP_LABELS: Record<string, string> = {
 export function useAgent() {
   const wsRef = useRef<WebSocket | null>(null)
   const store = useChatStore
+  const { token } = useAuth()
 
   const send = useCallback(async (message: string, figmaUrl?: string, images?: ImageAttachment[]) => {
     const state = store.getState()
@@ -33,10 +34,11 @@ export function useAgent() {
     setProcessing(true, conversationId)
 
     // 사용자 메시지 추가
-    const displayContent = images && images.length > 0
-      ? `${message}\n\n📎 이미지 ${images.length}장 첨부`
-      : message
-    addMessage({ type: 'user', content: displayContent }, conversationId)
+    addMessage({
+      type: 'user',
+      content: message,
+      images: images?.map((img) => `data:${img.mediaType};base64,${img.base64}`),
+    }, conversationId)
 
     // 봇 메시지 (로딩 표시용) 미리 생성
     const botMsgId = addMessage({
@@ -48,12 +50,14 @@ export function useAgent() {
     try {
       const res = await fetch(`${API_URL}/request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           message,
           threadId: state.threadId,
           figmaUrl,
-          deviceId: getDeviceId(),
           images: images?.map((img) => ({ base64: img.base64, mediaType: img.mediaType })),
           chatHistory: (state.conversationMessages[conversationId] || [])
             .filter((m) => m.type === 'user' || m.type === 'bot')
@@ -161,13 +165,17 @@ export function useAgent() {
               // _new → 실제 conversationId로 마이그레이션
               if (conversationId.startsWith('_new')) {
                 // 서버에서 돌아온 conversations를 다시 fetch해서 매칭
-                fetch(`${API_URL}/conversations?deviceId=${getDeviceId()}`)
+                fetch(`${API_URL}/conversations`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                  })
                   .then((r) => r.json())
                   .then(({ conversations }) => {
                     const match = conversations?.find((c: Record<string, unknown>) => c.thread_id === data.threadId)
                     if (match) {
                       store.getState().migrateConversation(conversationId, match.id)
                       store.getState().setConversations(conversations)
+                      // URL을 /chat/:id로 업데이트 (새로고침 없이)
+                      window.history.replaceState(null, '', `/chat/${match.id}`)
                     }
                   })
                   .catch(() => {})
@@ -179,9 +187,15 @@ export function useAgent() {
           }
 
           if (msg.type === 'error') {
+            const errorContent = msg.data?.error || '알 수 없는 오류'
+            const rawError = msg.data?.rawError
+            const canRetry = msg.data?.canRetry
+            const fullContent = rawError
+              ? `${errorContent}${canRetry ? '\n\n같은 요청을 다시 보내면 재시도할 수 있어요.' : ''}\n---detail---\n${rawError}`
+              : `${errorContent}${canRetry ? '\n\n같은 요청을 다시 보내면 재시도할 수 있어요.' : ''}`
             update(progressMsgId, {
               type: 'error',
-              content: msg.data?.error || '알 수 없는 오류',
+              content: fullContent,
               progress: undefined,
             })
             ws.close()

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
+import { toast } from 'sonner'
 import { useChatStore, type Message } from '../store/chat'
-import { getDeviceId } from '../lib/device'
+import { useAuth } from '../contexts/AuthContext'
 
 const API_URL = '/api'
 
@@ -13,27 +14,30 @@ export function useConversations() {
     setThreadId,
     reset,
   } = useChatStore()
+  const { token } = useAuth()
 
   const fetchConversations = useCallback(async () => {
     try {
-      const deviceId = getDeviceId()
-      const res = await fetch(`${API_URL}/conversations?deviceId=${deviceId}`)
+      const res = await fetch(`${API_URL}/conversations`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const { conversations } = await res.json()
       setConversations(conversations || [])
     } catch (err) {
       console.error('[CONVERSATIONS] 목록 불러오기 실패:', err)
     }
-  }, [setConversations])
+  }, [setConversations, token])
 
-  const selectConversation = useCallback(async (conversationId: string) => {
+  const selectConversation = useCallback(async (conversationId: string, forceRefresh = false) => {
     const state = useChatStore.getState()
 
-    // 이미 활성 대화면 무시
-    if (state.activeConversationId === conversationId) return
+    // 이미 활성 대화면 무시 (강제 새로고침 아닌 경우)
+    if (state.activeConversationId === conversationId && !forceRefresh) return
 
-    // 캐시된 메시지가 있으면 API 호출 스킵
+    // 캐시된 메시지가 있고 처리 중이면 캐시 사용 (progress 유지)
     const cached = state.conversationMessages[conversationId]
-    if (cached && cached.length > 0) {
+    const isProcessing = state.processingConversationId === conversationId
+    if (cached && cached.length > 0 && isProcessing && !forceRefresh) {
       setActiveConversation(conversationId)
       const conv = state.conversations.find((c) => c.id === conversationId)
       if (conv?.thread_id) setThreadId(conv.thread_id)
@@ -42,18 +46,28 @@ export function useConversations() {
 
     // 처음 로드하는 대화만 fetch
     try {
-      const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`)
+      const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const { messages: dbMessages } = await res.json()
 
-      const mapped: Message[] = (dbMessages || []).map((m: Record<string, unknown>, i: number) => ({
-        id: (m.id as string) || `db-${i}`,
-        type: m.role === 'user' ? 'user' : 'bot',
-        content: m.content as string,
-        timestamp: new Date(m.created_at as string).getTime(),
-        previewUrl: (m.metadata as Record<string, unknown>)?.previewUrl as string | undefined,
-        branchName: (m.metadata as Record<string, unknown>)?.branchName as string | undefined,
-        changedFiles: (m.metadata as Record<string, unknown>)?.changedFiles as string[] | undefined,
-      }))
+      const mapped: Message[] = (dbMessages || []).map((m: Record<string, unknown>, i: number) => {
+        const meta = (m.metadata || {}) as Record<string, unknown>
+        let content = m.content as string
+        // 이미지가 첨부됐던 메시지면 표시
+        if (meta.hasImages && m.role === 'user') {
+          content = content || `📎 이미지 ${meta.imageCount || 1}장 첨부`
+        }
+        return {
+          id: (m.id as string) || `db-${i}`,
+          type: m.role === 'user' ? 'user' : 'bot',
+          content,
+          timestamp: new Date(m.created_at as string).getTime(),
+          previewUrl: meta.previewUrl as string | undefined,
+          branchName: meta.branchName as string | undefined,
+          changedFiles: meta.changedFiles as string[] | undefined,
+        }
+      })
 
       loadMessages(conversationId, mapped)
       setActiveConversation(conversationId)
@@ -65,6 +79,24 @@ export function useConversations() {
     }
   }, [loadMessages, setActiveConversation, setThreadId])
 
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error(`${res.status}`)
+      // 삭제된 대화가 현재 활성이면 새 대화로
+      if (useChatStore.getState().activeConversationId === conversationId) {
+        reset()
+      }
+      fetchConversations()
+      toast.success('대화가 삭제됐어요')
+    } catch {
+      toast.error('대화 삭제에 실패했어요')
+    }
+  }, [token, reset, fetchConversations])
+
   const startNewChat = useCallback(() => {
     reset()
   }, [reset])
@@ -73,5 +105,5 @@ export function useConversations() {
     fetchConversations()
   }, [fetchConversations])
 
-  return { conversations, fetchConversations, selectConversation, startNewChat }
+  return { conversations, fetchConversations, selectConversation, deleteConversation, startNewChat }
 }
