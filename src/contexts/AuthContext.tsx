@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
 import { useChatStore } from '../store/chat'
+import { API_URL } from '../lib/api'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const ALLOWED_DOMAIN = 'belltherapeutics.com'
@@ -98,7 +99,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   // 토큰이 설정되면 서버에서 최신 프로필 가져오기
   useEffect(() => {
     if (!token || token === 'dev') return
-    fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_URL}/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data) => {
         if (data.user) {

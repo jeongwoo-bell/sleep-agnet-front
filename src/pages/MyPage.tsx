@@ -3,8 +3,7 @@ import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { ProfileEditModal } from '../components/ProfileEditModal'
-
-const API_URL = '/api'
+import { API_URL } from '../lib/api'
 
 interface Settings {
   autoCommit?: boolean

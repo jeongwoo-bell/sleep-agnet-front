@@ -8,6 +8,7 @@ import { ChatInput, type ChatInputHandle, type ImageAttachment } from './compone
 import { Sidebar } from './components/Sidebar'
 import { ProfileMenu } from './components/ProfileMenu'
 import { MyPage } from './pages/MyPage'
+import { API_URL } from './lib/api'
 
 function App() {
   return (
@@ -70,7 +71,7 @@ function Layout() {
     const pollStatus = async () => {
       if (cancelled) return
       try {
-        const res = await fetch(`/api/conversations/${conversationId}/status`, { headers })
+        const res = await fetch(`${API_URL}/conversations/${conversationId}/status`, { headers })
         const status = await res.json()
         if (cancelled) return
 

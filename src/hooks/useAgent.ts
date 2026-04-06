@@ -2,9 +2,7 @@ import { useRef, useCallback } from 'react'
 import { useChatStore, type ProgressStep } from '../store/chat'
 import { useAuth } from '../contexts/AuthContext'
 import type { ImageAttachment } from '../components/ChatInput'
-
-const API_URL = '/api'
-const WS_URL = `ws://${window.location.hostname}:3001`
+import { API_URL, WS_URL } from '../lib/api'
 
 const STEP_LABELS: Record<string, string> = {
   classify: '요청 분석',

@@ -2,8 +2,7 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
-
-const API_URL = '/api'
+import { API_URL } from '../lib/api'
 
 interface Props {
   open: boolean

@@ -2,8 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useChatStore, type Message } from '../store/chat'
 import { useAuth } from '../contexts/AuthContext'
-
-const API_URL = '/api'
+import { API_URL } from '../lib/api'
 
 export function useConversations() {
   const {

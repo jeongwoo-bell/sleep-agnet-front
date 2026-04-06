@@ -5,8 +5,7 @@ import { toast } from 'sonner'
 import { useChatStore, type Conversation } from '../store/chat'
 import { useConversations } from '../hooks/useConversations'
 import { useAuth } from '../contexts/AuthContext'
-
-const API_URL = '/api'
+import { API_URL } from '../lib/api'
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
