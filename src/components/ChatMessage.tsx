@@ -18,10 +18,33 @@ export function ChatMessage({ message }: Props) {
         className="flex justify-end"
       >
         <div
-          className="rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[75%] text-sm leading-relaxed whitespace-pre-wrap"
+          className="rounded-2xl rounded-br-sm max-w-[75%] overflow-hidden"
           style={{ background: 'var(--user-bubble)', color: 'var(--user-bubble-text)' }}
         >
-          {message.content}
+          {/* 첨부 이미지 */}
+          {message.images && message.images.length > 0 && (
+            <div className={`flex gap-1 p-1.5 ${message.images.length === 1 ? '' : 'flex-wrap'}`}>
+              {message.images.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={`첨부 ${i + 1}`}
+                  className="rounded-xl object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  style={{
+                    maxHeight: message.images!.length === 1 ? '240px' : '120px',
+                    maxWidth: message.images!.length === 1 ? '100%' : 'calc(50% - 2px)',
+                  }}
+                  onClick={() => window.open(src, '_blank')}
+                />
+              ))}
+            </div>
+          )}
+          {/* 텍스트 */}
+          {message.content && (
+            <div className="px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+              {message.content}
+            </div>
+          )}
         </div>
       </motion.div>
     )
