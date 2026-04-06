@@ -30,6 +30,8 @@ const THEMES: { value: Theme; icon: JSX.Element }[] = [
   },
 ]
 
+const INDICATOR_COLOR = '#a78bfa' // 연보라색
+
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(getStoredTheme)
   const activeIndex = THEMES.findIndex((t) => t.value === theme)
@@ -46,15 +48,15 @@ export function ThemeToggle() {
       className="relative flex items-center gap-0.5 rounded-lg p-0.5"
       style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)' }}
     >
-      {/* 슬라이딩 인디케이터 */}
+      {/* 슬라이딩 인디케이터 — 연보라색 */}
       <div
         className="absolute top-0.5 h-[calc(100%-4px)] rounded-md"
         style={{
           width: 'calc((100% - 4px) / 3)',
           left: `calc(2px + ${activeIndex} * (100% - 4px) / 3)`,
-          background: 'var(--bg-card)',
-          boxShadow: 'var(--shadow-sm)',
-          transition: 'left var(--transition-normal) var(--ease-default)',
+          background: INDICATOR_COLOR,
+          boxShadow: `0 1px 4px ${INDICATOR_COLOR}40`,
+          transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
 
@@ -62,8 +64,11 @@ export function ThemeToggle() {
         <button
           key={t.value}
           onClick={() => select(t.value)}
-          className="relative z-10 flex items-center justify-center w-7 h-6 rounded-md cursor-pointer transition-colors"
-          style={{ color: theme === t.value ? 'var(--text-primary)' : 'var(--text-muted)' }}
+          className="relative z-10 flex items-center justify-center w-7 h-6 rounded-md cursor-pointer"
+          style={{
+            color: theme === t.value ? '#ffffff' : 'var(--text-muted)',
+            transition: 'color 0.3s ease',
+          }}
           title={t.value === 'system' ? '시스템' : t.value === 'light' ? '라이트' : '다크'}
         >
           {t.icon}

@@ -10,32 +10,29 @@ export function setStoredTheme(theme: Theme) {
   localStorage.setItem(STORAGE_KEY, theme)
 }
 
+function setDark(isDark: boolean) {
+  if (isDark) document.documentElement.classList.add('dark')
+  else document.documentElement.classList.remove('dark')
+}
+
 export function applyTheme(theme: Theme, animate = true) {
-  const root = document.documentElement
   const isDark =
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
-  if (animate) {
-    // 화면 살짝 페이드아웃 → 테마 전환 → 페이드인
-    root.classList.remove('theme-fade')
-    // force reflow to restart animation
-    void root.offsetWidth
-    root.classList.add('theme-fade')
+  if (!animate) {
+    setDark(isDark)
+    return
+  }
 
-    // CSS 변수에서 duration 읽기
-    const duration = parseFloat(getComputedStyle(root).getPropertyValue('--transition-theme')) * 1000 || 700
-
-    // 살짝 어두워진 시점(25%)에 테마 전환
-    setTimeout(() => {
-      if (isDark) root.classList.add('dark')
-      else root.classList.remove('dark')
-    }, duration * 0.18)
-
-    setTimeout(() => root.classList.remove('theme-fade'), duration + 50)
+  // View Transitions API — 브라우저가 화면 캡처 → 테마 전환 → 크로스페이드
+  if ('startViewTransition' in document) {
+    (document as any).startViewTransition(() => {
+      setDark(isDark)
+    })
   } else {
-    if (isDark) root.classList.add('dark')
-    else root.classList.remove('dark')
+    // 미지원 브라우저 — 즉시 전환
+    setDark(isDark)
   }
 }
 
@@ -43,10 +40,7 @@ export function initTheme() {
   const theme = getStoredTheme()
   applyTheme(theme, false)
 
-  // system 모드면 OS 변경 감지
-  if (theme === 'system') {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (getStoredTheme() === 'system') applyTheme('system')
-    })
-  }
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (getStoredTheme() === 'system') applyTheme('system')
+  })
 }
