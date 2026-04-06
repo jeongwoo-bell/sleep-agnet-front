@@ -1,36 +1,121 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useChatStore } from './store/chat'
 import { useAgent } from './hooks/useAgent'
 import { useConversations } from './hooks/useConversations'
 import { ChatMessage } from './components/ChatMessage'
 import { ChatInput, type ChatInputHandle, type ImageAttachment } from './components/ChatInput'
 import { Sidebar } from './components/Sidebar'
-import { ThemeToggle } from './components/ThemeToggle'
+import { ProfileMenu } from './components/ProfileMenu'
+import { MyPage } from './pages/MyPage'
 
 function App() {
-  const messages = useChatStore((s) => s.messages)
-  const isProcessing = useChatStore((s) => s.isProcessing)
+  return (
+    <Routes>
+      <Route path="/*" element={<Layout />} />
+    </Routes>
+  )
+}
+
+function Layout() {
   const sidebarOpen = useChatStore((s) => s.sidebarOpen)
   const setSidebarOpen = useChatStore((s) => s.setSidebarOpen)
+  const isProcessing = useChatStore((s) => s.isProcessing)
+  const messages = useChatStore((s) => s.messages)
   const reset = useChatStore((s) => s.reset)
   const { send } = useAgent()
-  const { fetchConversations } = useConversations()
+  const { fetchConversations, selectConversation } = useConversations()
+  const navigate = useNavigate()
+  const location = useLocation()
   const bottomRef = useRef<HTMLDivElement>(null)
   const chatInputRef = useRef<ChatInputHandle>(null)
   const [globalDrag, setGlobalDrag] = useState(false)
   const dragCountRef = useRef(0)
+
+  const isMyPage = location.pathname === '/mypage'
+  const isChat = !isMyPage
+  // /chat/:id에서 conversationId 추출
+  const conversationId = location.pathname.startsWith('/chat/') ? location.pathname.split('/chat/')[1] : undefined
 
   const currentBranch = messages
     .slice()
     .reverse()
     .find((m) => m.branchName)?.branchName || null
 
+  // URL의 conversationId가 바뀌면 대화 로드
+  useEffect(() => {
+    if (conversationId) {
+      selectConversation(conversationId)
+    }
+  }, [conversationId])
+
+  // 대화가 서버에서 처리 중이면 progress 복원 + 폴링
+  useEffect(() => {
+    if (!conversationId) return
+    const state = useChatStore.getState()
+    if (state.processingConversationId === conversationId) return
+
+    const token = localStorage.getItem('st-agent-token')
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+
+    let cancelled = false
+    let progressMsgId: string | null = null
+
+    const STEP_LABELS: Record<string, string> = {
+      branch: '브랜치 준비', figma: '피그마 분석', image: '이미지 분석',
+      docs: '스펙 문서 확인', analyze: '파일 분석', codegen: '코드 수정',
+      build: '빌드 검증', push: '커밋 & 푸시', deploy: '배포',
+    }
+
+    const pollStatus = async () => {
+      if (cancelled) return
+      try {
+        const res = await fetch(`/api/conversations/${conversationId}/status`, { headers })
+        const status = await res.json()
+        if (cancelled) return
+
+        if (status.processing && status.steps?.length > 0) {
+          const progressSteps = status.steps
+            .filter((s: Record<string, string>) => s.step !== 'classify')
+            .map((s: Record<string, string>) => ({
+              step: STEP_LABELS[s.step] || s.step,
+              state: s.state,
+              detail: s.detail || undefined,
+            }))
+
+          if (!progressMsgId) {
+            // 첫 폴링 — progress 메시지 생성
+            progressMsgId = useChatStore.getState().addMessage({
+              type: 'progress', content: '', progress: progressSteps,
+            }, conversationId)
+          } else {
+            // 후속 폴링 — progress 업데이트
+            useChatStore.getState().updateMessage(progressMsgId, {
+              progress: progressSteps,
+            }, conversationId)
+          }
+
+          setTimeout(pollStatus, 2000)
+        } else if (!status.processing) {
+          // 완료 — DB에서 최신 메시지 로드
+          selectConversation(conversationId, true)
+        }
+      } catch {}
+    }
+
+    // 즉시 첫 체크
+    pollStatus()
+    return () => { cancelled = true }
+  }, [conversationId])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // 전역 드래그 감지 — 페이지 어디서든 이미지를 끌면 감지
+  // 전역 드래그 감지 (이미지 기능 비활성화 — 추후 활성화 시 조건 제거)
+  const IMAGE_DISABLED = true
   useEffect(() => {
+    if (IMAGE_DISABLED) return
     const onDragEnter = (e: DragEvent) => {
       e.preventDefault()
       dragCountRef.current++
@@ -63,7 +148,29 @@ function App() {
     }
   }, [])
 
+  const handleNewChat = () => {
+    reset()
+    fetchConversations()
+    navigate('/', { replace: true })
+  }
+
   const handleSend = async (message: string, figmaUrl?: string, images?: ImageAttachment[]) => {
+    // 새 대화면 즉시 사이드바에 표시
+    const state = useChatStore.getState()
+    if (!state.activeConversationId) {
+      const tempId = '_new'
+      const tempConv = {
+        id: tempId,
+        user_id: '',
+        thread_id: null,
+        branch_name: null,
+        title: (message || '새 대화').slice(0, 60),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      state.setConversations([tempConv, ...state.conversations])
+    }
+
     await send(message, figmaUrl, images)
     fetchConversations()
   }
@@ -83,12 +190,8 @@ function App() {
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--accent-blue)' }}>
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              이미지를 놓으세요
-            </span>
-            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              JPEG, PNG, GIF, WebP · 최대 5MB
-            </span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>이미지를 놓으세요</span>
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>JPEG, PNG, GIF, WebP · 최대 5MB</span>
           </div>
         </div>
       )}
@@ -113,12 +216,14 @@ function App() {
                 <path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
-              S
-            </div>
-            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
+            <button onClick={() => navigate('/')} className="flex items-center gap-2 cursor-pointer">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
+                S
+              </div>
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
+            </button>
 
-            {currentBranch && (
+            {currentBranch && isChat && (
               <div
                 className="flex items-center gap-1.5 rounded-lg px-2.5 py-1"
                 style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-primary)' }}
@@ -135,7 +240,7 @@ function App() {
               </div>
             )}
 
-            {isProcessing && (
+            {isProcessing && isChat && (
               <span
                 className="text-[11px] rounded-full px-2 py-0.5"
                 style={{ color: 'var(--text-tertiary)', background: 'var(--bg-hover)', border: '1px solid var(--border-secondary)' }}
@@ -146,10 +251,9 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            {currentBranch && <PrButton branchName={currentBranch} />}
+            {currentBranch && isChat && <PrButton branchName={currentBranch} />}
             <button
-              onClick={() => { reset(); fetchConversations() }}
+              onClick={handleNewChat}
               className="text-xs rounded-lg px-3 py-1.5 transition-all cursor-pointer"
               style={{ color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
@@ -157,31 +261,37 @@ function App() {
             >
               + 새 대화
             </button>
+            <ProfileMenu onMyPage={() => navigate('/mypage')} />
           </div>
         </header>
 
-        {/* 메시지 영역 */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 py-8">
-            {messages.length === 0 && <EmptyState />}
-            <div className="space-y-5">
-              {messages.map((msg) => (
-                <ChatMessage key={msg.id} message={msg} />
-              ))}
-            </div>
-            <div ref={bottomRef} />
-          </div>
-        </main>
+        {/* 페이지 컨텐츠 */}
+        {isMyPage ? (
+          <MyPage onBack={() => navigate('/')} />
+        ) : (
+          <>
+            <main className="flex-1 overflow-y-auto">
+              <div className="max-w-2xl mx-auto px-4 py-8">
+                {messages.length === 0 && <EmptyState />}
+                <div className="space-y-5">
+                  {messages.map((msg) => (
+                    <ChatMessage key={msg.id} message={msg} />
+                  ))}
+                </div>
+                <div ref={bottomRef} />
+              </div>
+            </main>
 
-        {/* 입력 */}
-        <div className="px-4 pb-6 pt-2 shrink-0">
-          <div className="max-w-2xl mx-auto">
-            <ChatInput ref={chatInputRef} onSend={handleSend} />
-            <p className="text-[11px] text-center mt-2.5" style={{ color: 'var(--text-muted)' }}>
-              SleepThera 랜딩페이지 전용 AI 에이전트
-            </p>
-          </div>
-        </div>
+            <div className="px-4 pb-6 pt-2 shrink-0">
+              <div className="max-w-2xl mx-auto">
+                <ChatInput ref={chatInputRef} onSend={handleSend} />
+                <p className="text-[11px] text-center mt-2.5" style={{ color: 'var(--text-muted)' }}>
+                  SleepThera 랜딩페이지 전용 AI 에이전트
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
