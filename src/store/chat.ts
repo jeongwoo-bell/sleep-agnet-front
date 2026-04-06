@@ -17,11 +17,12 @@ export interface Message {
   branchName?: string
   changedFiles?: string[]
   progress?: ProgressStep[]
+  images?: string[] // 첨부 이미지 base64 data URL
 }
 
 export interface Conversation {
   id: string
-  device_id: string
+  user_id: string
   thread_id: string | null
   branch_name: string | null
   title: string | null
@@ -75,10 +76,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const current = s.conversationMessages[targetId] || []
       const updated = [...current, { ...msg, id, timestamp: Date.now() }]
       const newMap = { ...s.conversationMessages, [targetId]: updated }
+      // 활성 대화이거나, 새 대화(_new)이면서 activeConversationId가 null이면 UI에 반영
+      const isActive = targetId === s.activeConversationId ||
+        (targetId === '_new' && !s.activeConversationId)
       return {
         conversationMessages: newMap,
-        // 활성 대화면 messages도 갱신
-        messages: targetId === s.activeConversationId ? updated : s.messages,
+        messages: isActive ? updated : s.messages,
       }
     })
     return id
@@ -90,9 +93,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const current = s.conversationMessages[targetId] || []
       const updated = current.map((m) => (m.id === id ? { ...m, ...updates } : m))
       const newMap = { ...s.conversationMessages, [targetId]: updated }
+      const isActive = targetId === s.activeConversationId ||
+        (targetId === '_new' && !s.activeConversationId)
       return {
         conversationMessages: newMap,
-        messages: targetId === s.activeConversationId ? updated : s.messages,
+        messages: isActive ? updated : s.messages,
       }
     })
   },
