@@ -135,6 +135,7 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
   const { conversations, selectConversation, deleteConversation, startNewChat } = useConversations()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const groups = groupConversations(conversations)
 
   const handleSelect = (convId: string) => {
@@ -232,7 +233,7 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
               </div>
             </button>
             <button
-              onClick={() => { if (window.confirm('로그아웃 하시겠어요?')) logout() }}
+              onClick={() => setShowLogoutModal(true)}
               className="p-2 rounded-lg transition-colors cursor-pointer shrink-0"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
@@ -246,6 +247,54 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
               </svg>
             </button>
           </div>
+
+          {/* 로그아웃 모달 */}
+          <AnimatePresence>
+            {showLogoutModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                style={{ background: 'rgba(0,0,0,0.4)' }}
+                onClick={() => setShowLogoutModal(false)}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="rounded-2xl p-6 w-[320px]"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="text-base font-semibold mb-1.5" style={{ color: 'var(--text-primary)' }}>로그아웃</h3>
+                  <p className="text-sm mb-5" style={{ color: 'var(--text-tertiary)' }}>정말 로그아웃 하시겠어요?</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowLogoutModal(false)}
+                      className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                      style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={() => { setShowLogoutModal(false); logout() }}
+                      className="flex-1 py-2 rounded-xl text-sm font-medium cursor-pointer transition-opacity"
+                      style={{ background: 'var(--accent-red)', color: '#fff' }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.aside>
       )}
     </AnimatePresence>
