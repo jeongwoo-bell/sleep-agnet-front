@@ -322,9 +322,13 @@ function PrButton({ branchName }: { branchName: string }) {
     }
     setState('loading')
     try {
-      const res = await fetch('/api/pr', {
+      const prToken = localStorage.getItem('st-agent-token')
+      const res = await fetch(`${API_URL}/pr`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(prToken ? { Authorization: `Bearer ${prToken}` } : {}),
+        },
         body: JSON.stringify({ branchName }),
       })
       const data = await res.json()
