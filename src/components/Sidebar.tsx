@@ -133,7 +133,7 @@ async function copyDebugLog(conv: Conversation, userEmail?: string, token?: stri
 export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
   const { sidebarOpen, activeConversationId } = useChatStore()
   const { conversations, selectConversation, deleteConversation, startNewChat } = useConversations()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const groups = groupConversations(conversations)
 
@@ -209,10 +209,10 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
           </div>
 
           {/* 하단: 프로필 */}
-          <div className="p-3" style={{ borderTop: '1px solid var(--border-secondary)' }}>
+          <div className="p-3 flex items-center gap-1" style={{ borderTop: '1px solid var(--border-secondary)' }}>
             <button
               onClick={onMyPage}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors cursor-pointer"
+              className="flex-1 flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors cursor-pointer min-w-0"
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
@@ -230,6 +230,20 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
                 <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{user?.name || 'User'}</div>
                 <div className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</div>
               </div>
+            </button>
+            <button
+              onClick={() => { if (window.confirm('로그아웃 하시겠어요?')) logout() }}
+              className="p-2 rounded-lg transition-colors cursor-pointer shrink-0"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              title="로그아웃"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
             </button>
           </div>
         </motion.aside>
