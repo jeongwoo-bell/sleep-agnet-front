@@ -43,7 +43,8 @@ export function useConversations() {
       return
     }
 
-    // 처음 로드하는 대화만 fetch
+    // DB에서 메시지 로드
+    useChatStore.getState().setLoadingMessages(true)
     try {
       const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -52,14 +53,28 @@ export function useConversations() {
 
       const mapped: Message[] = (dbMessages || []).map((m: Record<string, unknown>, i: number) => {
         const meta = (m.metadata || {}) as Record<string, unknown>
+        const dbType = m.type as string | null
         let content = m.content as string
+
         // 이미지가 첨부됐던 메시지면 표시
         if (meta.hasImages && m.role === 'user') {
-          content = content || `📎 이미지 ${meta.imageCount || 1}장 첨부`
+          content = content || `\u{1F4CE} \uC774\uBBF8\uC9C0 ${meta.imageCount || 1}\uC7A5 \uCCA8\uBD80`
         }
+
+        // DB type → 프론트 type 매핑
+        let frontendType: 'user' | 'bot' | 'error' = m.role === 'user' ? 'user' : 'bot'
+        if (m.role === 'assistant' && (dbType === 'build_failed' || dbType === 'error')) {
+          frontendType = 'error'
+        }
+
+        // build_failed는 에러 상세 포맷 복원
+        if (dbType === 'build_failed' && meta.rawError) {
+          content = content + '\n---detail---\n' + (meta.rawError as string)
+        }
+
         return {
           id: (m.id as string) || `db-${i}`,
-          type: m.role === 'user' ? 'user' : 'bot',
+          type: frontendType,
           content,
           timestamp: new Date(m.created_at as string).getTime(),
           previewUrl: meta.previewUrl as string | undefined,
@@ -75,6 +90,8 @@ export function useConversations() {
       if (conv?.thread_id) setThreadId(conv.thread_id)
     } catch (err) {
       console.error('[CONVERSATIONS] 메시지 불러오기 실패:', err)
+    } finally {
+      useChatStore.getState().setLoadingMessages(false)
     }
   }, [loadMessages, setActiveConversation, setThreadId])
 

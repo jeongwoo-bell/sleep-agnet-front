@@ -36,6 +36,7 @@ interface ChatState {
   activeConversationId: string | null
   threadId: string | null
   isProcessing: boolean
+  isLoadingMessages: boolean
   // 어떤 대화가 처리 중인지 추적
   processingConversationId: string | null
   conversations: Conversation[]
@@ -47,6 +48,7 @@ interface ChatState {
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>, conversationId?: string) => string
   updateMessage: (id: string, updates: Partial<Message>, conversationId?: string) => void
   setProcessing: (v: boolean, conversationId?: string) => void
+  setLoadingMessages: (v: boolean) => void
   setThreadId: (id: string) => void
   setConversations: (convs: Conversation[]) => void
   setActiveConversation: (id: string | null) => void
@@ -64,6 +66,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: null,
   threadId: null,
   isProcessing: false,
+  isLoadingMessages: false,
   processingConversationId: null,
   conversations: [],
   sidebarOpen: localStorage.getItem('st-agent-sidebar') !== 'false',
@@ -109,6 +112,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })
   },
 
+  setLoadingMessages: (v) => set({ isLoadingMessages: v }),
   setThreadId: (id) => set({ threadId: id }),
   setConversations: (conversations) => set({ conversations }),
 
@@ -145,10 +149,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (!msgs) return s
       const { [oldId]: _, ...rest } = s.conversationMessages
       const newMap = { ...rest, [newId]: msgs }
+      const wasActive = s.activeConversationId === oldId || (!s.activeConversationId && oldId.startsWith('_new'))
       return {
         conversationMessages: newMap,
-        activeConversationId: s.activeConversationId === oldId ? newId : s.activeConversationId,
+        activeConversationId: wasActive ? newId : s.activeConversationId,
         processingConversationId: s.processingConversationId === oldId ? newId : s.processingConversationId,
+        messages: wasActive ? msgs : s.messages,
       }
     })
   },

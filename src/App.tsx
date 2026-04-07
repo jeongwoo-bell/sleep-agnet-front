@@ -23,6 +23,7 @@ function Layout() {
   const sidebarOpen = useChatStore((s) => s.sidebarOpen)
   const setSidebarOpen = useChatStore((s) => s.setSidebarOpen)
   const isProcessing = useChatStore((s) => s.isProcessing)
+  const isLoadingMessages = useChatStore((s) => s.isLoadingMessages)
   const messages = useChatStore((s) => s.messages)
   const reset = useChatStore((s) => s.reset)
   const { send } = useAgent()
@@ -87,22 +88,21 @@ function Layout() {
             }))
 
           if (!progressMsgId) {
-            // 첫 폴링 — progress 메시지 생성
             progressMsgId = useChatStore.getState().addMessage({
               type: 'progress', content: '', progress: progressSteps,
             }, conversationId)
           } else {
-            // 후속 폴링 — progress 업데이트
             useChatStore.getState().updateMessage(progressMsgId, {
               progress: progressSteps,
             }, conversationId)
           }
 
           setTimeout(pollStatus, 2000)
-        } else if (!status.processing) {
-          // 완료 — DB에서 최신 메시지 로드
+        } else if (!status.processing && progressMsgId) {
+          // 처리 중이었다가 완료됨 → DB에서 최신 메시지 로드
           selectConversation(conversationId, true)
         }
+        // processing이 아니고 progressMsgId도 없으면 → 처음부터 처리 중 아님 → 폴링 중단
       } catch {}
     }
 
@@ -277,7 +277,16 @@ function Layout() {
           <>
             <main className="flex-1 overflow-y-auto">
               <div className="max-w-2xl mx-auto px-4 py-8">
-                {messages.length === 0 && <EmptyState />}
+                {messages.length === 0 && !isLoadingMessages && <EmptyState />}
+                {isLoadingMessages && (
+                  <div className="flex items-center justify-center py-12" style={{ color: 'var(--text-muted)' }}>
+                    <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-sm">대화를 불러오는 중...</span>
+                  </div>
+                )}
                 <div className="space-y-5">
                   {messages.map((msg) => (
                     <ChatMessage key={msg.id} message={msg} />
