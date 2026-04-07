@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Theme, getStoredTheme, setStoredTheme, applyTheme } from '../lib/theme'
 
-const THEMES: { value: Theme; icon: JSX.Element }[] = [
+const THEMES: { value: Theme; icon: React.ReactNode }[] = [
   {
     value: 'system',
     icon: (

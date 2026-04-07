@@ -131,7 +131,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   }, [token])
 
   const googleLogin = useGoogleLogin({
-    onSuccess: (response) => {
+    onSuccess: (_response) => {
       // implicit flow에서는 access_token만 옴 → ID token이 필요
       // 대신 Google의 userinfo 엔드포인트를 사용하거나, flow를 auth-code로 변경
       // 여기서는 credential response를 사용하기 위해 ux_mode: 'popup' + flow: 'implicit'

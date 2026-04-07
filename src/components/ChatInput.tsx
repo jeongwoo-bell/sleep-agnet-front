@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef, type DragEvent, type ClipboardEvent } from 'react'
+import { useState, useRef, useCallback, useImperativeHandle, forwardRef, type DragEvent, type ClipboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useChatStore } from '../store/chat'
 

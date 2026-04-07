@@ -154,7 +154,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   reset: () => {
-    const newId = '_new_' + Date.now()
     set((s) => ({
       activeConversationId: null,
       messages: [],

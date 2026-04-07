@@ -24,7 +24,7 @@ export function useAgent() {
 
   const send = useCallback(async (message: string, figmaUrl?: string, images?: ImageAttachment[]) => {
     const state = store.getState()
-    const { addMessage, updateMessage, setProcessing, setThreadId } = state
+    const { addMessage, updateMessage, setProcessing } = state
 
     const conversationId = state.activeConversationId || '_new'
     if (state.processingConversationId === conversationId) return
@@ -81,14 +81,13 @@ export function useAgent() {
 
   const subscribeAndWait = useCallback((requestId: string, botMsgId: string, conversationId: string): Promise<void> => {
     return new Promise((resolve) => {
-      const { updateMessage, setThreadId, addMessage, setActiveConversation } = store.getState()
       let progressMsgId = botMsgId
 
       // 모든 업데이트는 캡처된 conversationId 기준
       const update = (id: string, updates: Partial<Record<string, unknown>>) => {
         store.getState().updateMessage(id, updates, conversationId)
       }
-      const add = (msg: Parameters<typeof addMessage>[0]) => {
+      const add = (msg: Parameters<ReturnType<typeof useChatStore.getState>['addMessage']>[0]) => {
         return store.getState().addMessage(msg, conversationId)
       }
 
