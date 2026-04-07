@@ -223,7 +223,7 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
                   {user?.name?.charAt(0) || '?'}
                 </div>
               )}
-              <div className="min-w-0">
+              <div className="min-w-0 text-left">
                 <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{user?.name || 'User'}</div>
                 <div className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</div>
               </div>
