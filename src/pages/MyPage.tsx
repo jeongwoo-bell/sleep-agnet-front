@@ -11,9 +11,10 @@ interface Settings {
 
 interface Props {
   onBack: () => void
+  onReport?: () => void
 }
 
-export function MyPage({ onBack }: Props) {
+export function MyPage({ onBack, onReport }: Props) {
   const { user, token } = useAuth()
   const [settings, setSettings] = useState<Settings>({})
   const [saving, setSaving] = useState(false)
@@ -178,6 +179,33 @@ export function MyPage({ onBack }: Props) {
             </div>
           </div>
         </section>
+
+        {/* 피드백 */}
+        <button
+          onClick={onReport}
+          className="w-full rounded-2xl p-5 mb-4 flex items-center gap-3 transition-colors cursor-pointer text-left"
+          style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-secondary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+        >
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+              <path d="M14 1l-5 5M9 1h5v5M8 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>개발자에게 의견 보내기</div>
+            <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+              버그 리포트, 기능 제안, 불편한 점
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-auto shrink-0" style={{ color: 'var(--text-muted)' }}>
+            <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
     </div>
   )

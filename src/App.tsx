@@ -8,6 +8,7 @@ import { ChatInput, type ChatInputHandle, type ImageAttachment } from './compone
 import { Sidebar } from './components/Sidebar'
 import { ProfileMenu } from './components/ProfileMenu'
 import { MyPage } from './pages/MyPage'
+import { ReportPage } from './pages/ReportPage'
 import { API_URL } from './lib/api'
 
 function App() {
@@ -34,7 +35,8 @@ function Layout() {
   const dragCountRef = useRef(0)
 
   const isMyPage = location.pathname === '/mypage'
-  const isChat = !isMyPage
+  const isReportPage = location.pathname === '/report'
+  const isChat = !isMyPage && !isReportPage
   // /chat/:id에서 conversationId 추출
   const conversationId = location.pathname.startsWith('/chat/') ? location.pathname.split('/chat/')[1] : undefined
 
@@ -217,7 +219,7 @@ function Layout() {
                 <path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
-            <button onClick={() => navigate('/')} className="flex items-center gap-2 cursor-pointer">
+            <button onClick={handleNewChat} className="flex items-center gap-2 cursor-pointer">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
                 S
               </div>
@@ -268,7 +270,9 @@ function Layout() {
 
         {/* 페이지 컨텐츠 */}
         {isMyPage ? (
-          <MyPage onBack={() => navigate('/')} />
+          <MyPage onBack={() => navigate('/')} onReport={() => navigate('/report')} />
+        ) : isReportPage ? (
+          <ReportPage onBack={() => navigate('/mypage')} />
         ) : (
           <>
             <main className="flex-1 overflow-y-auto">
