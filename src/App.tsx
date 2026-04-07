@@ -6,7 +6,7 @@ import { useConversations } from './hooks/useConversations'
 import { ChatMessage } from './components/ChatMessage'
 import { ChatInput, type ChatInputHandle, type ImageAttachment } from './components/ChatInput'
 import { Sidebar } from './components/Sidebar'
-import { ProfileMenu } from './components/ProfileMenu'
+// ProfileMenu moved to Sidebar
 import { MyPage } from './pages/MyPage'
 import { ReportPage } from './pages/ReportPage'
 import { API_URL } from './lib/api'
@@ -25,7 +25,7 @@ function Layout() {
   const isProcessing = useChatStore((s) => s.isProcessing)
   const isLoadingMessages = useChatStore((s) => s.isLoadingMessages)
   const messages = useChatStore((s) => s.messages)
-  const reset = useChatStore((s) => s.reset)
+  // reset은 Sidebar에서 처리
   const { send } = useAgent()
   const { fetchConversations, selectConversation } = useConversations()
   const navigate = useNavigate()
@@ -151,11 +151,7 @@ function Layout() {
     }
   }, [])
 
-  const handleNewChat = () => {
-    reset()
-    fetchConversations()
-    navigate('/', { replace: true })
-  }
+  // handleNewChat는 Sidebar로 이동
 
   const handleSend = async (message: string, figmaUrl?: string, images?: ImageAttachment[]) => {
     // 새 대화면 즉시 사이드바에 표시
@@ -199,7 +195,7 @@ function Layout() {
         </div>
       )}
 
-      <Sidebar />
+      <Sidebar onMyPage={() => navigate('/mypage')} />
 
       <div className="flex flex-col flex-1 min-w-0">
         {/* 헤더 */}
@@ -219,12 +215,6 @@ function Layout() {
                 <path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
-            <button onClick={handleNewChat} className="flex items-center gap-2 cursor-pointer">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
-                S
-              </div>
-              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
-            </button>
 
             {currentBranch && isChat && (
               <BranchBadge branchName={currentBranch} />
@@ -242,16 +232,6 @@ function Layout() {
 
           <div className="flex items-center gap-2">
             {currentBranch && isChat && <PrButton branchName={currentBranch} />}
-            <button
-              onClick={handleNewChat}
-              className="text-xs rounded-lg px-3 py-1.5 transition-all cursor-pointer"
-              style={{ color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)' }}
-            >
-              + 새 대화
-            </button>
-            <ProfileMenu onMyPage={() => navigate('/mypage')} />
           </div>
         </header>
 

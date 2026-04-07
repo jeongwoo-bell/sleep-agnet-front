@@ -130,9 +130,10 @@ async function copyDebugLog(conv: Conversation, userEmail?: string, token?: stri
   }
 }
 
-export function Sidebar() {
+export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
   const { sidebarOpen, activeConversationId } = useChatStore()
   const { conversations, selectConversation, deleteConversation, startNewChat } = useConversations()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const groups = groupConversations(conversations)
 
@@ -157,21 +158,28 @@ export function Sidebar() {
           className="h-screen flex flex-col overflow-hidden shrink-0"
           style={{ background: 'var(--bg-primary)', borderRight: '1px solid var(--border-secondary)' }}
         >
-          <div className="p-3">
+          {/* 상단: 로고 + 새 대화 */}
+          <div className="p-3 flex items-center gap-2">
+            <button onClick={handleNewChat} className="flex items-center gap-2 cursor-pointer shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
+                S
+              </div>
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
+            </button>
             <button
               onClick={handleNewChat}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors cursor-pointer"
-              style={{ color: 'var(--text-secondary)', background: 'var(--bg-hover)', border: '1px solid var(--border-secondary)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-active)'; e.currentTarget.style.borderColor = 'var(--border-hover)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-secondary)' }}
+              className="ml-auto p-1.5 rounded-lg transition-colors cursor-pointer"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
-              새 대화
             </button>
           </div>
 
+          {/* 대화 목록 */}
           <div className="flex-1 overflow-y-auto px-2 pb-3">
             {groups.length === 0 && (
               <div className="text-center text-xs mt-8" style={{ color: 'var(--text-muted)' }}>
@@ -195,6 +203,31 @@ export function Sidebar() {
                 ))}
               </div>
             ))}
+          </div>
+
+          {/* 하단: 프로필 */}
+          <div className="p-3" style={{ borderTop: '1px solid var(--border-secondary)' }}>
+            <button
+              onClick={onMyPage}
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors cursor-pointer"
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              {user?.picture ? (
+                <img src={user.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+                  style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}
+                >
+                  {user?.name?.charAt(0) || '?'}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{user?.name || 'User'}</div>
+                <div className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</div>
+              </div>
+            </button>
           </div>
         </motion.aside>
       )}
