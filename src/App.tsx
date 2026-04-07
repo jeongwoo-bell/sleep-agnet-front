@@ -228,9 +228,8 @@ function Layout() {
 
             {currentBranch && isChat && (
               <div
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 cursor-default group relative"
                 style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-primary)' }}
-                title={currentBranch}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-tertiary)' }}>
                   <path d="M5 2.5v7M11 6.5v7M5 9.5a3 3 0 013-3h0a3 3 0 013 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -241,6 +240,13 @@ function Layout() {
                 <span className="text-[11px] font-mono max-w-[200px] truncate" style={{ color: 'var(--text-tertiary)' }}>
                   {currentBranch}
                 </span>
+                {/* 호버 툴팁 */}
+                <div
+                  className="absolute top-full left-0 mt-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                >
+                  {currentBranch}
+                </div>
               </div>
             )}
 
