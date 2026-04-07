@@ -164,11 +164,18 @@ export function ChatMessage({ message }: Props) {
 
 function ErrorMessage({ content }: { content: string }) {
   const [showDetail, setShowDetail] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // ---detail--- 구분자로 요약/상세 분리
   const parts = content.split('---detail---')
   const summary = parts[0].trim()
   const detail = parts[1]?.trim()
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(detail || summary)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <motion.div
@@ -186,12 +193,24 @@ function ErrorMessage({ content }: { content: string }) {
           <div className="whitespace-pre-wrap">{summary}</div>
           {detail && (
             <>
-              <button
-                onClick={() => setShowDetail(!showDetail)}
-                className="mt-2 text-[11px] opacity-60 hover:opacity-100 transition-opacity cursor-pointer underline"
-              >
-                {showDetail ? '접기' : '자세히 보기'}
-              </button>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => setShowDetail(!showDetail)}
+                  className="text-[11px] opacity-60 hover:opacity-100 transition-opacity cursor-pointer underline"
+                >
+                  {showDetail ? '접기' : '자세히 보기'}
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="text-[11px] opacity-60 hover:opacity-100 transition-opacity cursor-pointer flex items-center gap-1"
+                >
+                  {copied ? (
+                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>복사됨</>
+                  ) : (
+                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>에러 복사</>
+                  )}
+                </button>
+              </div>
               {showDetail && (
                 <motion.pre
                   initial={{ opacity: 0, height: 0 }}
