@@ -158,24 +158,29 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
           className="h-screen flex flex-col overflow-hidden shrink-0"
           style={{ background: 'var(--bg-primary)', borderRight: '1px solid var(--border-secondary)' }}
         >
-          {/* 상단: 로고 + 새 대화 */}
-          <div className="p-3 flex items-center gap-2">
+          {/* 상단: 로고 */}
+          <div className="p-3 pb-1 flex items-center gap-2">
             <button onClick={handleNewChat} className="flex items-center gap-2 cursor-pointer shrink-0">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
                 S
               </div>
               <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
             </button>
+          </div>
+
+          {/* 새 대화 버튼 */}
+          <div className="px-3 pb-2 pt-1.5">
             <button
               onClick={handleNewChat}
-              className="ml-auto p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors cursor-pointer"
+              style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-secondary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-hover)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-secondary)' }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="shrink-0">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
+              새 대화
             </button>
           </div>
 
