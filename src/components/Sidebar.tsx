@@ -173,9 +173,9 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
             <button
               onClick={handleNewChat}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors cursor-pointer"
-              style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-secondary)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-hover)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-secondary)' }}
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="shrink-0">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
