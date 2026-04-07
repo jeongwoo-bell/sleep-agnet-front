@@ -227,27 +227,7 @@ function Layout() {
             </button>
 
             {currentBranch && isChat && (
-              <div
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 cursor-default group relative"
-                style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-primary)' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-tertiary)' }}>
-                  <path d="M5 2.5v7M11 6.5v7M5 9.5a3 3 0 013-3h0a3 3 0 013 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <circle cx="5" cy="2.5" r="1.5" fill="currentColor" />
-                  <circle cx="11" cy="6.5" r="1.5" fill="currentColor" />
-                  <circle cx="11" cy="13.5" r="1.5" fill="currentColor" />
-                </svg>
-                <span className="text-[11px] font-mono max-w-[200px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                  {currentBranch}
-                </span>
-                {/* 호버 툴팁 */}
-                <div
-                  className="absolute top-full left-0 mt-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
-                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-                >
-                  {currentBranch}
-                </div>
-              </div>
+              <BranchBadge branchName={currentBranch} />
             )}
 
             {isProcessing && isChat && (
@@ -314,6 +294,61 @@ function Layout() {
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+function BranchBadge({ branchName }: { branchName: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(branchName)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 cursor-pointer group transition-all"
+      style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-primary)' }}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0" style={{ color: 'var(--text-tertiary)' }}>
+        <path d="M5 2.5v7M11 6.5v7M5 9.5a3 3 0 013-3h0a3 3 0 013 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="5" cy="2.5" r="1.5" fill="currentColor" />
+        <circle cx="11" cy="6.5" r="1.5" fill="currentColor" />
+        <circle cx="11" cy="13.5" r="1.5" fill="currentColor" />
+      </svg>
+      <span
+        className="text-[11px] font-mono transition-all"
+        style={{
+          color: 'var(--text-tertiary)',
+          maxWidth: '200px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.maxWidth = '600px' }}
+        onMouseLeave={(e) => { e.currentTarget.style.maxWidth = '200px' }}
+      >
+        {branchName}
+      </span>
+      <button
+        onClick={handleCopy}
+        className="shrink-0 opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity cursor-pointer"
+        style={{ color: 'var(--text-tertiary)' }}
+      >
+        {copied ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+        )}
+      </button>
     </div>
   )
 }
