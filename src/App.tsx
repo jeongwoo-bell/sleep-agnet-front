@@ -230,6 +230,7 @@ function Layout() {
               <div
                 className="flex items-center gap-1.5 rounded-lg px-2.5 py-1"
                 style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-primary)' }}
+                title={currentBranch}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-tertiary)' }}>
                   <path d="M5 2.5v7M11 6.5v7M5 9.5a3 3 0 013-3h0a3 3 0 013 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
