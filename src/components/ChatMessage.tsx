@@ -231,8 +231,6 @@ function ErrorMessage({ content }: { content: string }) {
 
 function BotAvatar() {
   return (
-    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5">
-      S
-    </div>
+    <img src="/image/logo.png" alt="Sleep Agent" className="w-7 h-7 rounded-lg shrink-0 mt-0.5" />
   )
 }

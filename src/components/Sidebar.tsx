@@ -161,9 +161,7 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
           {/* 상단: 로고 */}
           <div className="p-3 pb-1 flex items-center gap-2">
             <button onClick={handleNewChat} className="flex items-center gap-2 cursor-pointer shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
-                S
-              </div>
+              <img src="/image/logo.png" alt="Sleep Agent" className="w-7 h-7 rounded-lg" />
               <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
             </button>
           </div>
