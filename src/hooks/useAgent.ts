@@ -76,6 +76,43 @@ export function useAgent() {
       }, conversationId)
     } finally {
       setProcessing(false)
+      // WS 끝난 후 현재 대화가 아직 활성이면 DB에서 최신 상태 로드
+      // (WS가 complete 없이 끊긴 경우 폴링 효과)
+      const currentState = store.getState()
+      const activeId = currentState.activeConversationId
+      if (activeId && !activeId.startsWith('_new')) {
+        setTimeout(() => {
+          // 짧은 딜레이 후 메시지 리로드 (서버 DB 저장 대기)
+          fetch(`${API_URL}/conversations/${activeId}/messages`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('st-agent-token') || ''}` },
+          })
+            .then((r) => r.json())
+            .then(({ messages: dbMessages }) => {
+              if (dbMessages?.length > 0) {
+                const { loadMessages, setActiveConversation } = store.getState()
+                const mapped = dbMessages.map((m: Record<string, unknown>, i: number) => {
+                  const meta = (m.metadata || {}) as Record<string, unknown>
+                  let frontendType: 'user' | 'bot' | 'error' = m.role === 'user' ? 'user' : 'bot'
+                  if (m.role === 'assistant' && (m.type === 'build_failed' || m.type === 'error')) frontendType = 'error'
+                  let content = m.content as string
+                  if (m.type === 'build_failed' && meta.rawError) content += '\n---detail---\n' + (meta.rawError as string)
+                  return {
+                    id: (m.id as string) || `db-${i}`,
+                    type: frontendType,
+                    content,
+                    timestamp: new Date(m.created_at as string).getTime(),
+                    previewUrl: meta.previewUrl as string | undefined,
+                    branchName: meta.branchName as string | undefined,
+                    changedFiles: meta.changedFiles as string[] | undefined,
+                  }
+                })
+                loadMessages(activeId, mapped)
+                setActiveConversation(activeId)
+              }
+            })
+            .catch(() => {})
+        }, 2000)
+      }
     }
   }, [])
 
@@ -206,33 +243,39 @@ export function useAgent() {
             const fullContent = rawError
               ? `${errorContent}${canRetry ? '\n\n같은 요청을 다시 보내면 재시도할 수 있어요.' : ''}\n---detail---\n${rawError}`
               : `${errorContent}${canRetry ? '\n\n같은 요청을 다시 보내면 재시도할 수 있어요.' : ''}`
-            update(progressMsgId, {
-              type: 'error',
-              content: fullContent,
-              progress: undefined,
-            })
+
+            // 프로그레스 스텝의 현재 진행 중인 것을 에러로 표시
+            const latestMsgs = store.getState().conversationMessages[conversationId] || []
+            const currentProgressMsg = latestMsgs.find((m) => m.id === progressMsgId)
+            if (currentProgressMsg?.progress?.length) {
+              const updatedSteps = currentProgressMsg.progress.map((s) =>
+                s.state === 'start' ? { ...s, state: 'error' as const } : s
+              )
+              update(progressMsgId, { progress: updatedSteps })
+            }
+
+            // 에러 메시지를 별도로 추가
+            add({ type: 'error', content: fullContent })
             ws.close()
             resolve()
           }
         }
 
         ws.onerror = () => {
-          update(progressMsgId, {
-            type: 'error',
-            content: '서버 연결에 실패했어요.',
-            progress: undefined,
-          })
+          // WS 실패해도 서버에서 처리는 계속됨 → 폴링으로 복구 가능
+          console.warn('[WS] 연결 실패 — 폴링으로 전환됨')
+          resolve()
+        }
+
+        ws.onclose = () => {
+          // WS가 complete 없이 닫힌 경우 → 폴링이 나머지 처리
+          console.warn('[WS] 연결 종료')
           resolve()
         }
 
         setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
             ws.close()
-            update(progressMsgId, {
-              type: 'error',
-              content: '요청 시간이 초과되었어요.',
-              progress: undefined,
-            })
           }
           resolve()
         }, 300000)

@@ -46,32 +46,50 @@ function Layout() {
     .reverse()
     .find((m) => m.branchName)?.branchName || null
 
-  // URL의 conversationId가 바뀌면 대화 로드 → 처리 중이면 폴링 시작
+  // URL의 conversationId가 바뀌면 대화 로드 → 상태 확인 → 필요 시 폴링
   useEffect(() => {
     if (!conversationId) return
     const state = useChatStore.getState()
-    // WS로 추적 중인 대화면 스킵
+    // WS로 추적 중인 대화면 스킵 (이미 실시간 업데이트 중)
     if (state.processingConversationId === conversationId) return
 
     let cancelled = false
     let progressMsgId: string | null = null
+    let pollCount = 0
 
     const token = localStorage.getItem('st-agent-token')
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
 
     const STEP_LABELS: Record<string, string> = {
       branch: '브랜치 준비', figma: '피그마 분석', image: '이미지 분석',
-      docs: '스펙 문서 확인', analyze: '파일 분석', codegen: '코드 수정',
-      build: '빌드 검증', verify: '검증', push: '커밋 & 푸시', deploy: '배포',
+      analyze_image: '이미지 분석', fetch_figma: '피그마 분석',
+      analyze_files: '파일 분석', check_docs: '스펙 문서 확인',
+      generate_code: '코드 수정', docs: '스펙 문서 확인', analyze: '파일 분석',
+      codegen: '코드 수정', build: '빌드 검증', verify: '검증',
+      push: '커밋 & 푸시', deploy: '배포',
     }
 
     const pollStatus = async () => {
       if (cancelled) return
+      pollCount++
+      // 최대 5분(150회 * 2초) 폴링 후 중단
+      if (pollCount > 150) {
+        if (progressMsgId) {
+          useChatStore.getState().updateMessage(progressMsgId, {
+            type: 'error',
+            content: '처리 시간이 초과됐어요. 페이지를 새로고침해주세요.',
+            progress: undefined,
+          }, conversationId)
+        }
+        return
+      }
+
       try {
         const res = await fetch(`${API_URL}/conversations/${conversationId}/status`, { headers })
         const status = await res.json()
         if (cancelled) return
 
+        // 케이스 1: 처리 중 → 프로그레스 표시 + 계속 폴링
         if (status.processing && status.steps?.length > 0) {
           const progressSteps = status.steps
             .filter((s: Record<string, string>) => s.step !== 'classify')
@@ -92,14 +110,35 @@ function Layout() {
           }
 
           setTimeout(pollStatus, 2000)
-        } else if (!status.processing && progressMsgId) {
-          // 처리 중이었다가 완료됨 → DB에서 최신 메시지 로드
-          selectConversation(conversationId, true)
+          return
         }
-      } catch {}
+
+        // 케이스 2: 완료됨 → DB에서 최신 메시지 로드
+        if (!status.processing && status.completed) {
+          await selectConversation(conversationId, true)
+          return
+        }
+
+        // 케이스 3: 에러 → 에러 메시지 표시 + DB 리로드
+        if (!status.processing && status.error) {
+          await selectConversation(conversationId, true)
+          return
+        }
+
+        // 케이스 4: processing 중이었다가 null이 됨 (완료 후 정리됨)
+        if (!status.processing && progressMsgId) {
+          await selectConversation(conversationId, true)
+          return
+        }
+
+        // 케이스 5: 처음부터 처리 중 아님 → 폴링 중단
+      } catch {
+        // 네트워크 에러 시 재시도
+        if (!cancelled) setTimeout(pollStatus, 3000)
+      }
     }
 
-    // 먼저 DB 메시지 로드 완료 → 그 다음 폴링 시작
+    // 먼저 DB 메시지 로드 → 그 다음 상태 확인
     selectConversation(conversationId).then(() => {
       if (!cancelled) pollStatus()
     })
