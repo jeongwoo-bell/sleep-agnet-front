@@ -46,29 +46,23 @@ function Layout() {
     .reverse()
     .find((m) => m.branchName)?.branchName || null
 
-  // URL의 conversationId가 바뀌면 대화 로드
-  useEffect(() => {
-    if (conversationId) {
-      selectConversation(conversationId)
-    }
-  }, [conversationId])
-
-  // 대화가 서버에서 처리 중이면 progress 복원 + 폴링
+  // URL의 conversationId가 바뀌면 대화 로드 → 처리 중이면 폴링 시작
   useEffect(() => {
     if (!conversationId) return
     const state = useChatStore.getState()
+    // WS로 추적 중인 대화면 스킵
     if (state.processingConversationId === conversationId) return
-
-    const token = localStorage.getItem('st-agent-token')
-    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
 
     let cancelled = false
     let progressMsgId: string | null = null
 
+    const token = localStorage.getItem('st-agent-token')
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+
     const STEP_LABELS: Record<string, string> = {
       branch: '브랜치 준비', figma: '피그마 분석', image: '이미지 분석',
       docs: '스펙 문서 확인', analyze: '파일 분석', codegen: '코드 수정',
-      build: '빌드 검증', push: '커밋 & 푸시', deploy: '배포',
+      build: '빌드 검증', verify: '검증', push: '커밋 & 푸시', deploy: '배포',
     }
 
     const pollStatus = async () => {
@@ -102,12 +96,14 @@ function Layout() {
           // 처리 중이었다가 완료됨 → DB에서 최신 메시지 로드
           selectConversation(conversationId, true)
         }
-        // processing이 아니고 progressMsgId도 없으면 → 처음부터 처리 중 아님 → 폴링 중단
       } catch {}
     }
 
-    // 즉시 첫 체크
-    pollStatus()
+    // 먼저 DB 메시지 로드 완료 → 그 다음 폴링 시작
+    selectConversation(conversationId).then(() => {
+      if (!cancelled) pollStatus()
+    })
+
     return () => { cancelled = true }
   }, [conversationId])
 
