@@ -77,19 +77,23 @@ export function useAgent() {
     } finally {
       setProcessing(false)
       // WS 끝난 후 현재 대화가 아직 활성이면 DB에서 최신 상태 로드
-      // (WS가 complete 없이 끊긴 경우 폴링 효과)
       const currentState = store.getState()
       const activeId = currentState.activeConversationId
       if (activeId && !activeId.startsWith('_new')) {
         setTimeout(() => {
-          // 짧은 딜레이 후 메시지 리로드 (서버 DB 저장 대기)
+          // 유저가 이미 다른 대화로 전환했으면 스킵 (UI 강제 전환 방지)
+          const stillActive = store.getState().activeConversationId === activeId
+          if (!stillActive) return
+
           fetch(`${API_URL}/conversations/${activeId}/messages`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('st-agent-token') || ''}` },
           })
             .then((r) => r.json())
             .then(({ messages: dbMessages }) => {
+              // 로드 시점에도 다시 확인
+              if (store.getState().activeConversationId !== activeId) return
               if (dbMessages?.length > 0) {
-                const { loadMessages, setActiveConversation } = store.getState()
+                const { loadMessages } = store.getState()
                 const mapped = dbMessages.map((m: Record<string, unknown>, i: number) => {
                   const meta = (m.metadata || {}) as Record<string, unknown>
                   let frontendType: 'user' | 'bot' | 'error' = m.role === 'user' ? 'user' : 'bot'
@@ -107,7 +111,6 @@ export function useAgent() {
                   }
                 })
                 loadMessages(activeId, mapped)
-                setActiveConversation(activeId)
               }
             })
             .catch(() => {})

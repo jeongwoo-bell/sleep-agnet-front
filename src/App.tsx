@@ -55,9 +55,7 @@ function Layout() {
 
     let cancelled = false
     let pollCount = 0
-    // 기존 progress 메시지가 있으면 재사용 (중복 방지)
-    const existingMsgs = useChatStore.getState().conversationMessages[conversationId] || []
-    let progressMsgId: string | null = existingMsgs.find((m) => m.type === 'progress')?.id || null
+    let progressMsgId: string | null = null
 
     const token = localStorage.getItem('st-agent-token')
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
@@ -71,11 +69,17 @@ function Layout() {
       push: '커밋 & 푸시', deploy: '배포',
     }
 
+    // 매 폴링 시 현재 store 상태에서 progress 메시지 재탐색 (stale 참조 방지)
+    const syncProgressMsgId = () => {
+      const msgs = useChatStore.getState().conversationMessages[conversationId] || []
+      progressMsgId = msgs.find((m) => m.type === 'progress')?.id || null
+    }
+
     const pollStatus = async () => {
       if (cancelled) return
       pollCount++
-      // 최대 5분(150회 * 2초) 폴링 후 중단
       if (pollCount > 150) {
+        syncProgressMsgId()
         if (progressMsgId) {
           useChatStore.getState().updateMessage(progressMsgId, {
             type: 'error',
@@ -85,6 +89,9 @@ function Layout() {
         }
         return
       }
+
+      // 매번 현재 store에서 progress 메시지 동기화 → selectConversation이 메시지를 교체해도 안전
+      syncProgressMsgId()
 
       try {
         const res = await fetch(`${API_URL}/conversations/${conversationId}/status`, { headers })
@@ -121,7 +128,7 @@ function Layout() {
           return
         }
 
-        // 케이스 3: 에러 → 에러 메시지 표시 + DB 리로드
+        // 케이스 3: 에러 → DB 리로드
         if (!status.processing && status.error) {
           await selectConversation(conversationId, true)
           return
@@ -135,15 +142,23 @@ function Layout() {
 
         // 케이스 5: 처음부터 처리 중 아님 → 폴링 중단
       } catch {
-        // 네트워크 에러 시 재시도
         if (!cancelled) setTimeout(pollStatus, 3000)
       }
     }
 
-    // 먼저 DB 메시지 로드 → 그 다음 상태 확인
-    selectConversation(conversationId).then(() => {
-      if (!cancelled) pollStatus()
-    })
+    // Sidebar에서 이미 로드했으면 DB 재호출 없이 바로 폴링 시작
+    const currentState = useChatStore.getState()
+    if (currentState.activeConversationId === conversationId) {
+      syncProgressMsgId()
+      pollStatus()
+    } else {
+      selectConversation(conversationId).then(() => {
+        if (!cancelled) {
+          syncProgressMsgId()
+          pollStatus()
+        }
+      })
+    }
 
     return () => { cancelled = true }
   }, [conversationId])
