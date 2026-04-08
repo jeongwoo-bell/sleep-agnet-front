@@ -213,6 +213,21 @@ export function useAgent() {
             })
           }
 
+          if (msg.type === 'log') {
+            const { step, message: logMsg } = msg.data || {}
+            if (step && logMsg) {
+              const label = STEP_LABELS[step] || step
+              const msgs = store.getState().conversationMessages[conversationId] || []
+              const progressMsg = msgs.find((m) => m.id === progressMsgId)
+              if (progressMsg?.progress) {
+                const updatedSteps = progressMsg.progress.map((s) =>
+                  s.step === label ? { ...s, logs: [...(s.logs || []), logMsg] } : s,
+                )
+                update(progressMsgId, { progress: updatedSteps })
+              }
+            }
+          }
+
           if (msg.type === 'complete') {
             const data = msg.data
             if (data.threadId) {

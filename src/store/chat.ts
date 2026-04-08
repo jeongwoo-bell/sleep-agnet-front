@@ -6,6 +6,7 @@ export interface ProgressStep {
   step: string
   state: 'pending' | 'start' | 'done' | 'error'
   detail?: string
+  logs?: string[]
 }
 
 export interface Message {
