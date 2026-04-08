@@ -161,21 +161,21 @@ export function useAgent() {
           }
 
           if (msg.type === 'stream_end') {
-            // 스트리밍 텍스트가 실제로 있었을 때만 새 progress 메시지 생성
-            // (botMsgId가 'bot'으로 바뀐 경우 = 텍스트가 있었음)
-            const messages = store.getState().conversationMessages[conversationId] || []
-            const currentBotMsg = messages.find((m) => m.id === botMsgId)
-            if (currentBotMsg?.type === 'bot' && currentBotMsg.content) {
-              progressMsgId = add({
-                type: 'progress',
-                content: '',
-                progress: [],
-              })
+            // plan이 이미 별도 progress 메시지를 만들었으면 스킵
+            if (progressMsgId === botMsgId) {
+              const messages = store.getState().conversationMessages[conversationId] || []
+              const currentBotMsg = messages.find((m) => m.id === botMsgId)
+              if (currentBotMsg?.type === 'bot' && currentBotMsg.content) {
+                progressMsgId = add({
+                  type: 'progress',
+                  content: '',
+                  progress: [],
+                })
+              }
             }
           }
 
           if (msg.type === 'plan') {
-            // 서버에서 전체 계획이 왔음 → 기존 progress 메시지에 합침 (중복 버블 방지)
             const planSteps = (msg.data?.steps || [])
               .filter((s: string) => s !== 'classify')
               .map((s: string) => ({
@@ -183,7 +183,12 @@ export function useAgent() {
                 state: 'pending' as const,
               }))
 
-            update(progressMsgId, { type: 'progress', progress: planSteps })
+            // plan은 항상 별도 progress 메시지로 분리 (stream이 botMsgId를 덮어쓰므로)
+            if (progressMsgId !== botMsgId) {
+              update(progressMsgId, { type: 'progress', progress: planSteps })
+            } else {
+              progressMsgId = add({ type: 'progress', content: '', progress: planSteps })
+            }
           }
 
           if (msg.type === 'progress' || msg.type === 'status') {
