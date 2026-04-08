@@ -89,7 +89,7 @@ export function ChatMessage({ message }: Props) {
           className="rounded-2xl rounded-bl-sm px-4 py-3"
           style={{ background: 'var(--bg-overlay)', border: '1px solid var(--border-secondary)' }}
         >
-          <div className="prose prose-sm max-w-none leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 dark:prose-invert"
+          <div className="prose prose-sm max-w-none leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:break-words dark:prose-invert"
             style={{
               '--tw-prose-body': 'var(--text-secondary)',
               '--tw-prose-headings': 'var(--text-primary)',
