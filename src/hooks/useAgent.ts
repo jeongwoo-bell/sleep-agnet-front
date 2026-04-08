@@ -8,11 +8,17 @@ const STEP_LABELS: Record<string, string> = {
   classify: '요청 분석',
   branch: '브랜치 준비',
   figma: '피그마 분석',
+  fetch_figma: '피그마 분석',
   image: '이미지 분석',
+  analyze_image: '이미지 분석',
   docs: '스펙 문서 확인',
+  check_docs: '스펙 문서 확인',
   analyze: '파일 분석',
+  analyze_files: '파일 분석',
   codegen: '코드 수정',
+  generate_code: '코드 수정',
   build: '빌드 검증',
+  verify: '검증',
   push: '커밋 & 푸시',
   deploy: '배포',
 }
@@ -155,15 +161,21 @@ export function useAgent() {
           }
 
           if (msg.type === 'stream_end') {
-            progressMsgId = add({
-              type: 'progress',
-              content: '',
-              progress: [],
-            })
+            // 스트리밍 텍스트가 실제로 있었을 때만 새 progress 메시지 생성
+            // (botMsgId가 'bot'으로 바뀐 경우 = 텍스트가 있었음)
+            const messages = store.getState().conversationMessages[conversationId] || []
+            const currentBotMsg = messages.find((m) => m.id === botMsgId)
+            if (currentBotMsg?.type === 'bot' && currentBotMsg.content) {
+              progressMsgId = add({
+                type: 'progress',
+                content: '',
+                progress: [],
+              })
+            }
           }
 
           if (msg.type === 'plan') {
-            // 서버에서 전체 계획이 왔음 → 모든 step을 pending으로 한번에 표시
+            // 서버에서 전체 계획이 왔음 → 기존 progress 메시지에 합침 (중복 버블 방지)
             const planSteps = (msg.data?.steps || [])
               .filter((s: string) => s !== 'classify')
               .map((s: string) => ({
@@ -171,11 +183,7 @@ export function useAgent() {
                 state: 'pending' as const,
               }))
 
-            if (progressMsgId && progressMsgId !== botMsgId) {
-              update(progressMsgId, { type: 'progress', progress: planSteps })
-            } else {
-              progressMsgId = add({ type: 'progress', content: '', progress: planSteps })
-            }
+            update(progressMsgId, { type: 'progress', progress: planSteps })
           }
 
           if (msg.type === 'progress' || msg.type === 'status') {
