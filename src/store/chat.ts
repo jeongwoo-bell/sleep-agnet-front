@@ -134,14 +134,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadMessages: (conversationId, messages) => {
     set((s) => {
-      // 기존 progress 메시지 보존 — DB 메시지와 합치기
-      const existing = s.conversationMessages[conversationId] || []
-      const progressMsgs = existing.filter((m) => m.type === 'progress')
-      const merged = [...messages, ...progressMsgs]
-      const newMap = { ...s.conversationMessages, [conversationId]: merged }
+      const newMap = { ...s.conversationMessages, [conversationId]: messages }
       return {
         conversationMessages: newMap,
-        messages: conversationId === s.activeConversationId ? merged : s.messages,
+        messages: conversationId === s.activeConversationId ? messages : s.messages,
       }
     })
   },

@@ -176,16 +176,11 @@ export function useAgent() {
           }
 
           if (msg.type === 'progress' || msg.type === 'status') {
-            const { step, state, ...rest } = msg.data
+            const { step, state } = msg.data
             if (step === 'classify') return
             const label = STEP_LABELS[step] || step
-            const detailParts = Object.entries(rest)
-              .filter(([k]) => !['step', 'state'].includes(k))
-              .map(([, v]) => String(v))
-            const detail = detailParts.length > 0 ? detailParts.join(', ') : undefined
 
-            // stream_end가 아직 안 왔으면 (progressMsgId === botMsgId이고 botMsgId가 bot 타입이면)
-            // 새 progress 메시지 자동 생성
+            // stream_end가 아직 안 왔으면 새 progress 메시지 자동 생성
             const messages = store.getState().conversationMessages[conversationId] || []
             const currentProgressMsg = messages.find((m) => m.id === progressMsgId)
             if (progressMsgId === botMsgId && currentProgressMsg?.type === 'bot') {
@@ -202,7 +197,7 @@ export function useAgent() {
               type: 'progress',
               progress: updateProgressSteps(
                 currentMsg?.progress || [],
-                { step: label, state, detail },
+                { step: label, state },
               ),
             })
           }

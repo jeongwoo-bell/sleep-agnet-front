@@ -54,8 +54,10 @@ function Layout() {
     if (state.processingConversationId === conversationId) return
 
     let cancelled = false
-    let progressMsgId: string | null = null
     let pollCount = 0
+    // 기존 progress 메시지가 있으면 재사용 (중복 방지)
+    const existingMsgs = useChatStore.getState().conversationMessages[conversationId] || []
+    let progressMsgId: string | null = existingMsgs.find((m) => m.type === 'progress')?.id || null
 
     const token = localStorage.getItem('st-agent-token')
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
