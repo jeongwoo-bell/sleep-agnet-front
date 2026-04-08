@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import type { ProgressStep } from '../store/chat'
 
 interface Props {
@@ -11,31 +11,30 @@ export function ProgressSteps({ steps }: Props) {
   }
 
   return (
-    <div className="space-y-1.5">
-      <AnimatePresence mode="popLayout">
-        {steps.map((step) => (
-          <motion.div
-            key={step.step}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center gap-2.5 text-[13px]"
-          >
-            <StepIcon state={step.state} />
-            <span style={{
-              color: step.state === 'start' ? 'var(--text-primary)' :
-                step.state === 'done' ? 'var(--text-tertiary)' :
-                step.state === 'error' ? 'var(--accent-red)' :
-                'var(--text-muted)'
-            }}>
-              {step.step}
-            </span>
-            {step.detail && (
-              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{step.detail}</span>
-            )}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+    <div className="space-y-1">
+      {steps.map((step, i) => (
+        <motion.div
+          key={step.step}
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.2, delay: step.state === 'pending' ? i * 0.03 : 0 }}
+          className="flex items-center gap-2.5 text-[13px]"
+        >
+          <StepIcon state={step.state} />
+          <span style={{
+            color: step.state === 'start' ? 'var(--text-primary)' :
+              step.state === 'done' ? 'var(--text-tertiary)' :
+              step.state === 'error' ? 'var(--accent-red)' :
+              'var(--text-muted)',
+            opacity: step.state === 'pending' ? 0.5 : 1,
+          }}>
+            {step.step}
+          </span>
+          {step.detail && (
+            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{step.detail}</span>
+          )}
+        </motion.div>
+      ))}
     </div>
   )
 }

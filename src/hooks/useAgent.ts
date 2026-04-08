@@ -122,6 +122,22 @@ export function useAgent() {
             })
           }
 
+          if (msg.type === 'plan') {
+            // 서버에서 전체 계획이 왔음 → 모든 step을 pending으로 한번에 표시
+            const planSteps = (msg.data?.steps || [])
+              .filter((s: string) => s !== 'classify')
+              .map((s: string) => ({
+                step: STEP_LABELS[s] || s,
+                state: 'pending' as const,
+              }))
+
+            if (progressMsgId && progressMsgId !== botMsgId) {
+              update(progressMsgId, { type: 'progress', progress: planSteps })
+            } else {
+              progressMsgId = add({ type: 'progress', content: '', progress: planSteps })
+            }
+          }
+
           if (msg.type === 'progress' || msg.type === 'status') {
             const { step, state, ...rest } = msg.data
             if (step === 'classify') return
