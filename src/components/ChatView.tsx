@@ -16,10 +16,14 @@ interface Props {
 export function ChatView({ conversationId }: Props) {
   const messages = useChatStore((s) => s.messages)
   const isLoadingMessages = useChatStore((s) => s.isLoadingMessages)
+  const activeConversationId = useChatStore((s) => s.activeConversationId)
   const { send } = useAgent()
   const { fetchConversations, selectConversation } = useConversations()
   const bottomRef = useRef<HTMLDivElement>(null)
   const chatInputRef = useRef<ChatInputHandle>(null)
+
+  // conversationId와 store가 아직 동기화 안 됐으면 즉시 스켈레톤 (useEffect 전)
+  const isStale = !!conversationId && activeConversationId !== conversationId
 
   // conversationId 변경 시 대화 로드 + 폴링
   useEffect(() => {
@@ -156,18 +160,8 @@ export function ChatView({ conversationId }: Props) {
     <>
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-8">
-          {isLoadingMessages ? (
-            <div className="flex flex-col items-center justify-center py-20" style={{ color: 'var(--text-muted)' }}>
-              <div className="flex items-center gap-1.5 mb-2">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-1.5 h-1.5 rounded-full animate-pulse"
-                    style={{ background: 'var(--text-muted)', animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
-            </div>
+          {isLoadingMessages || isStale ? (
+            <ChatSkeleton />
           ) : messages.length === 0 ? (
             <EmptyState />
           ) : (
@@ -190,5 +184,41 @@ export function ChatView({ conversationId }: Props) {
         </div>
       </div>
     </>
+  )
+}
+
+function ChatSkeleton() {
+  return (
+    <div className="space-y-5 animate-pulse">
+      {/* 유저 메시지 스켈레톤 */}
+      <div className="flex justify-end">
+        <div className="rounded-2xl rounded-br-sm px-4 py-3 w-48" style={{ background: 'var(--bg-hover)' }}>
+          <div className="h-3 rounded-full w-full" style={{ background: 'var(--border-secondary)' }} />
+        </div>
+      </div>
+      {/* 봇 메시지 스켈레톤 */}
+      <div className="flex gap-3">
+        <div className="w-8 h-8 rounded-xl shrink-0" style={{ background: 'var(--bg-hover)' }} />
+        <div className="rounded-2xl rounded-bl-sm px-4 py-3 flex-1 max-w-[70%] space-y-2" style={{ background: 'var(--bg-hover)' }}>
+          <div className="h-3 rounded-full w-full" style={{ background: 'var(--border-secondary)' }} />
+          <div className="h-3 rounded-full w-4/5" style={{ background: 'var(--border-secondary)' }} />
+          <div className="h-3 rounded-full w-3/5" style={{ background: 'var(--border-secondary)' }} />
+        </div>
+      </div>
+      {/* 유저 메시지 스켈레톤 2 */}
+      <div className="flex justify-end">
+        <div className="rounded-2xl rounded-br-sm px-4 py-3 w-36" style={{ background: 'var(--bg-hover)' }}>
+          <div className="h-3 rounded-full w-full" style={{ background: 'var(--border-secondary)' }} />
+        </div>
+      </div>
+      {/* 봇 메시지 스켈레톤 2 */}
+      <div className="flex gap-3">
+        <div className="w-8 h-8 rounded-xl shrink-0" style={{ background: 'var(--bg-hover)' }} />
+        <div className="rounded-2xl rounded-bl-sm px-4 py-3 flex-1 max-w-[60%] space-y-2" style={{ background: 'var(--bg-hover)' }}>
+          <div className="h-3 rounded-full w-full" style={{ background: 'var(--border-secondary)' }} />
+          <div className="h-3 rounded-full w-2/3" style={{ background: 'var(--border-secondary)' }} />
+        </div>
+      </div>
+    </div>
   )
 }
