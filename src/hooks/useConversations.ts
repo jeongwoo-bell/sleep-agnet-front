@@ -43,9 +43,13 @@ export function useConversations() {
       return
     }
 
-    // DB에서 메시지 로드 — 먼저 이전 메시지 비우고 로딩 표시
-    setActiveConversation(conversationId)
-    useChatStore.getState().setLoadingMessages(true)
+    // DB에서 메시지 로드 — 대화 전환 + 로딩 + 메시지 비우기를 한 번에 (깜빡임 방지)
+    useChatStore.setState({
+      activeConversationId: conversationId,
+      messages: [],
+      isLoadingMessages: true,
+      threadId: null,
+    })
     try {
       const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -85,7 +89,6 @@ export function useConversations() {
       })
 
       loadMessages(conversationId, mapped)
-      setActiveConversation(conversationId)
 
       const conv = useChatStore.getState().conversations.find((c) => c.id === conversationId)
       if (conv?.thread_id) setThreadId(conv.thread_id)
