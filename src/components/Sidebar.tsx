@@ -1,11 +1,13 @@
+'use client'
+
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { useChatStore, type Conversation } from '../store/chat'
-import { useConversations } from '../hooks/useConversations'
-import { useAuth } from '../contexts/AuthContext'
-import { API_URL } from '../lib/api'
+import { useChatStore, type Conversation } from '@/store/chat'
+import { useConversations } from '@/hooks/useConversations'
+import { useAuth } from '@/contexts/AuthContext'
+import { API_URL } from '@/lib/api'
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -130,22 +132,22 @@ async function copyDebugLog(conv: Conversation, userEmail?: string, token?: stri
   }
 }
 
-export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
+export function Sidebar() {
   const { sidebarOpen, activeConversationId } = useChatStore()
   const { conversations, selectConversation, deleteConversation, startNewChat } = useConversations()
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const router = useRouter()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const groups = groupConversations(conversations)
 
   const handleSelect = (convId: string) => {
     selectConversation(convId)
-    navigate(`/chat/${convId}`)
+    router.push(`/chat/${convId}`)
   }
 
   const handleNewChat = () => {
     startNewChat()
-    navigate('/', { replace: true })
+    router.replace('/')
   }
 
   return (
@@ -212,7 +214,7 @@ export function Sidebar({ onMyPage }: { onMyPage: () => void }) {
           {/* 하단: 프로필 */}
           <div className="p-3 flex items-center gap-1" style={{ borderTop: '1px solid var(--border-secondary)' }}>
             <button
-              onClick={onMyPage}
+              onClick={() => router.push('/mypage')}
               className="flex-1 flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors cursor-pointer min-w-0"
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}

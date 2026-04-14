@@ -1,6 +1,8 @@
+'use client'
+
 import { type ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { LoginPage } from '../pages/LoginPage'
+import { LoginPage } from '@/views/LoginPage'
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()

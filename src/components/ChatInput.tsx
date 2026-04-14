@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useRef, useCallback, useImperativeHandle, forwardRef, type DragEvent, type ClipboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useChatStore } from '../store/chat'

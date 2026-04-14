@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import Markdown from 'react-markdown'
 import { motion } from 'framer-motion'
@@ -231,6 +233,8 @@ function ErrorMessage({ content }: { content: string }) {
 
 function BotAvatar() {
   return (
-    <img src="/image/logo.png" alt="Sleep Agent" className="w-7 h-7 rounded-lg shrink-0 mt-0.5" />
+    <div className="w-7 h-7 rounded-lg shrink-0 mt-0.5 bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-[10px] font-bold text-white">
+      S
+    </div>
   )
 }

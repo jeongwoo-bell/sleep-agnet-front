@@ -1,10 +1,12 @@
+'use client'
+
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
 import { useChatStore } from '../store/chat'
 import { API_URL } from '../lib/api'
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''
 const ALLOWED_DOMAIN = 'belltherapeutics.com'
 
 interface User {

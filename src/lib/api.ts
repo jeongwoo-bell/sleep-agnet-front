@@ -1,2 +1,2 @@
-export const API_URL = import.meta.env.VITE_API_URL || '/api'
-export const WS_URL = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:3001`
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:3001` : '')

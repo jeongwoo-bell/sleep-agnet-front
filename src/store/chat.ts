@@ -69,7 +69,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
   processingConversationId: null,
   conversations: [],
-  sidebarOpen: localStorage.getItem('st-agent-sidebar') !== 'false',
+  sidebarOpen: typeof window !== 'undefined' ? localStorage.getItem('st-agent-sidebar') !== 'false' : true,
   messages: [],
 
   addMessage: (msg, conversationId) => {

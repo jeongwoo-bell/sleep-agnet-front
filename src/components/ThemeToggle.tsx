@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { type Theme, getStoredTheme, setStoredTheme, applyTheme } from '../lib/theme'
 
