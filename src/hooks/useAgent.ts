@@ -187,8 +187,8 @@ export function useAgent() {
                     if (match) {
                       store.getState().migrateConversation(conversationId, match.id)
                       store.getState().setConversations(conversations)
-                      // URL을 /chat/:id로 업데이트 (새로고침 없이)
-                      window.history.replaceState(null, '', `/chat/${match.id}`)
+                      // URL을 /agent/:id로 업데이트 (새로고침 없이)
+                      window.history.replaceState(null, '', `/agent/${match.id}`)
                     }
                   })
                   .catch(() => {})

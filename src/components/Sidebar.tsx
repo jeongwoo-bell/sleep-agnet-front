@@ -9,6 +9,8 @@ import { useConversations } from '@/hooks/useConversations'
 import { useAuth } from '@/contexts/AuthContext'
 import { API_URL } from '@/lib/api'
 
+// Note: useAuth and API_URL are used by ConversationItem's copyDebugLog
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
   const now = new Date()
@@ -134,20 +136,17 @@ async function copyDebugLog(conv: Conversation, userEmail?: string, token?: stri
 
 export function Sidebar() {
   const { sidebarOpen, activeConversationId } = useChatStore()
-  const { conversations, selectConversation, deleteConversation, startNewChat } = useConversations()
-  const { user, logout } = useAuth()
+  const { conversations, deleteConversation, startNewChat } = useConversations()
   const router = useRouter()
-  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const groups = groupConversations(conversations)
 
   const handleSelect = (convId: string) => {
-    // 네비게이션만 — 메시지 로딩은 ChatView에서 처리
-    router.push(`/chat/${convId}`)
+    router.push(`/agent/${convId}`)
   }
 
   const handleNewChat = () => {
     startNewChat()
-    router.replace('/')
+    router.replace('/agent')
   }
 
   return (
@@ -158,19 +157,11 @@ export function Sidebar() {
           animate={{ width: 260, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="h-screen flex flex-col overflow-hidden shrink-0"
+          className="h-full flex flex-col overflow-hidden shrink-0"
           style={{ background: 'var(--bg-primary)', borderRight: '1px solid var(--border-secondary)' }}
         >
-          {/* 상단: 로고 */}
-          <div className="p-3 pb-1 flex items-center gap-2">
-            <button onClick={handleNewChat} className="flex items-center gap-2 cursor-pointer shrink-0">
-              <img src="/image/logo.png" alt="Sleep Agent" className="w-7 h-7 rounded-lg" />
-              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Sleep Agent</span>
-            </button>
-          </div>
-
           {/* 새 대화 버튼 */}
-          <div className="px-3 pb-2 pt-1.5">
+          <div className="px-3 py-2">
             <button
               onClick={handleNewChat}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors cursor-pointer"
@@ -211,92 +202,6 @@ export function Sidebar() {
             ))}
           </div>
 
-          {/* 하단: 프로필 */}
-          <div className="p-3 flex items-center gap-1" style={{ borderTop: '1px solid var(--border-secondary)' }}>
-            <button
-              onClick={() => router.push('/mypage')}
-              className="flex-1 flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors cursor-pointer min-w-0"
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              {user?.picture ? (
-                <img src={user.picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
-              ) : (
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-                  style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}
-                >
-                  {user?.name?.charAt(0) || '?'}
-                </div>
-              )}
-              <div className="min-w-0 text-left">
-                <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{user?.name || 'User'}</div>
-                <div className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</div>
-              </div>
-            </button>
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="p-2 rounded-lg transition-colors cursor-pointer shrink-0"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              title="로그아웃"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* 로그아웃 모달 */}
-          <AnimatePresence>
-            {showLogoutModal && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="fixed inset-0 z-50 flex items-center justify-center"
-                style={{ background: 'rgba(0,0,0,0.4)' }}
-                onClick={() => setShowLogoutModal(false)}
-              >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  transition={{ duration: 0.15 }}
-                  className="rounded-2xl p-6 w-[320px]"
-                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h3 className="text-base font-semibold mb-1.5" style={{ color: 'var(--text-primary)' }}>로그아웃</h3>
-                  <p className="text-sm mb-5" style={{ color: 'var(--text-tertiary)' }}>정말 로그아웃 하시겠어요?</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowLogoutModal(false)}
-                      className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer"
-                      style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      취소
-                    </button>
-                    <button
-                      onClick={() => { setShowLogoutModal(false); logout() }}
-                      className="flex-1 py-2 rounded-xl text-sm font-medium cursor-pointer transition-opacity"
-                      style={{ background: 'var(--accent-red)', color: '#fff' }}
-                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
-                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                      로그아웃
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.aside>
       )}
     </AnimatePresence>
