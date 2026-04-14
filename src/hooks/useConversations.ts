@@ -43,7 +43,8 @@ export function useConversations() {
       return
     }
 
-    // DB에서 메시지 로드
+    // DB에서 메시지 로드 — 먼저 이전 메시지 비우고 로딩 표시
+    setActiveConversation(conversationId)
     useChatStore.getState().setLoadingMessages(true)
     try {
       const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {

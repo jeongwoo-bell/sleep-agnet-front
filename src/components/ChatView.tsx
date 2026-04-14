@@ -156,21 +156,27 @@ export function ChatView({ conversationId }: Props) {
     <>
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-8">
-          {messages.length === 0 && !isLoadingMessages && <EmptyState />}
-          {isLoadingMessages && (
-            <div className="flex items-center justify-center py-12" style={{ color: 'var(--text-muted)' }}>
-              <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3" />
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <span className="text-sm">대화를 불러오는 중...</span>
+          {isLoadingMessages ? (
+            <div className="flex flex-col items-center justify-center py-20" style={{ color: 'var(--text-muted)' }}>
+              <div className="flex items-center gap-1.5 mb-2">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full animate-pulse"
+                    style={{ background: 'var(--text-muted)', animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-5">
+              {messages.map((msg) => (
+                <ChatMessage key={msg.id} message={msg} />
+              ))}
             </div>
           )}
-          <div className="space-y-5">
-            {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
-            ))}
-          </div>
           <div ref={bottomRef} />
         </div>
       </main>
