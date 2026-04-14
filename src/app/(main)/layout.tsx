@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useChatStore } from '@/store/chat'
+import { useConversations } from '@/hooks/useConversations'
 import { AuthGuard } from '@/components/AuthGuard'
 import { Sidebar } from '@/components/Sidebar'
 import { BranchBadge } from '@/components/BranchBadge'
@@ -21,6 +23,12 @@ function MainShell({ children }: { children: React.ReactNode }) {
   const isProcessing = useChatStore((s) => s.isProcessing)
   const messages = useChatStore((s) => s.messages)
   const pathname = usePathname()
+  const { fetchConversations } = useConversations()
+
+  // 대화 목록은 레이아웃에서 한 번만 fetch
+  useEffect(() => {
+    fetchConversations()
+  }, [fetchConversations])
 
   const isChat = !pathname.startsWith('/mypage') && !pathname.startsWith('/report')
 

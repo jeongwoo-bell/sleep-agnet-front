@@ -141,7 +141,7 @@ export function Sidebar() {
   const groups = groupConversations(conversations)
 
   const handleSelect = (convId: string) => {
-    selectConversation(convId)
+    // 네비게이션만 — 메시지 로딩은 ChatView에서 처리
     router.push(`/chat/${convId}`)
   }
 

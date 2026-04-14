@@ -121,9 +121,5 @@ export function useConversations() {
     reset()
   }, [reset])
 
-  useEffect(() => {
-    fetchConversations()
-  }, [fetchConversations])
-
   return { conversations, fetchConversations, selectConversation, deleteConversation, startNewChat }
 }
