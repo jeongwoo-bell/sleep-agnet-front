@@ -187,8 +187,10 @@ export function useAgent() {
                     if (match) {
                       store.getState().migrateConversation(conversationId, match.id)
                       store.getState().setConversations(conversations)
-                      // URL을 /chat/:id로 업데이트 (새로고침 없이)
-                      window.history.replaceState(null, '', `/chat/${match.id}`)
+                      // URL을 /project/:projectId/agent/:id로 업데이트 (새로고침 없이)
+                      const projectMatch = window.location.pathname.match(/^\/project\/([^/]+)/)
+                      const projectId = projectMatch ? projectMatch[1] : 'sleepthera'
+                      window.history.replaceState(null, '', `/project/${projectId}/agent/${match.id}`)
                     }
                   })
                   .catch(() => {})
