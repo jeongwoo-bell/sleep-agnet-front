@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useChatStore, type Conversation } from '@/store/chat'
 import { useConversations } from '@/hooks/useConversations'
 import { useAuth } from '@/contexts/AuthContext'
 import { API_URL } from '@/lib/api'
+import { getCurrentProjectId } from '@/lib/apps'
 
 // Note: useAuth and API_URL are used by ConversationItem's copyDebugLog
 
@@ -138,15 +139,17 @@ export function Sidebar() {
   const { sidebarOpen, activeConversationId } = useChatStore()
   const { conversations, deleteConversation, startNewChat } = useConversations()
   const router = useRouter()
+  const pathname = usePathname()
+  const projectId = getCurrentProjectId(pathname) || 'sleepthera'
   const groups = groupConversations(conversations)
 
   const handleSelect = (convId: string) => {
-    router.push(`/agent/${convId}`)
+    router.push(`/project/${projectId}/agent/${convId}`)
   }
 
   const handleNewChat = () => {
     startNewChat()
-    router.replace('/agent')
+    router.replace(`/project/${projectId}/agent`)
   }
 
   return (

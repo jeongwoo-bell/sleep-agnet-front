@@ -1,80 +1,39 @@
 'use client'
 
 import Link from 'next/link'
+import { APPS, ORG_NAME, type App } from '@/lib/apps'
 
-const TOOLS = [
-  {
-    href: '/agent',
-    title: 'AI Agent',
-    description: '자연어로 SleepThera 랜딩페이지 UI를 수정하고, 피그마 디자인을 코드로 구현합니다.',
-    icon: AgentIcon,
-    color: '#3ECF8E',
-  },
-  {
-    href: '/logs',
-    title: 'Logs',
-    description: '유저 행동 로그와 서버 로그를 통합 조회하고, 에러 원인을 추적합니다.',
-    icon: LogsIcon,
-    color: '#60a5fa',
-    badge: 'Coming soon',
-  },
-]
-
-export default function DashboardPage() {
+export default function ProjectsPage() {
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-6 py-16">
-        <div className="mb-10">
-          <h1 className="text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            개발팀 도구
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            AI 에이전트와 디버깅 도구로 개발 워크플로우를 가속합니다.
-          </p>
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="text-[11px] mb-1" style={{ color: 'var(--text-muted)' }}>{ORG_NAME}</div>
+            <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Projects</h1>
+          </div>
+          <button
+            disabled
+            className="flex items-center gap-1.5 text-[13px] font-medium rounded-md px-3 py-1.5 cursor-not-allowed"
+            style={{
+              color: 'var(--text-muted)',
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--border-primary)',
+            }}
+            title="추후 지원 예정"
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            New project
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {TOOLS.map((tool) => (
-            <Link
-              key={tool.href}
-              href={tool.href}
-              className="group block rounded-xl p-5 transition-all no-underline"
-              style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-primary)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-hover)'
-                e.currentTarget.style.boxShadow = 'var(--shadow-md)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-primary)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center"
-                  style={{ background: `${tool.color}15`, color: tool.color }}
-                >
-                  <tool.icon />
-                </div>
-                {tool.badge && (
-                  <span
-                    className="text-[10px] font-medium rounded-full px-2 py-0.5"
-                    style={{ color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-secondary)' }}
-                  >
-                    {tool.badge}
-                  </span>
-                )}
-              </div>
-              <h2 className="text-[15px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                {tool.title}
-              </h2>
-              <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-                {tool.description}
-              </p>
-            </Link>
+        {/* 프로젝트 그리드 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {APPS.map((app) => (
+            <ProjectCard key={app.id} app={app} />
           ))}
         </div>
       </div>
@@ -82,18 +41,21 @@ export default function DashboardPage() {
   )
 }
 
-function AgentIcon() {
+function ProjectCard({ app }: { app: App }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 8V4H8" /><rect x="2" y="2" width="20" height="20" rx="5" /><path d="M2 12h20" /><path d="M12 2v20" />
-    </svg>
-  )
-}
-
-function LogsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" />
-    </svg>
+    <Link
+      href={`/project/${app.id}`}
+      className="group block rounded-xl p-4 no-underline transition-all h-[120px] flex flex-col"
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)' }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-hover)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-primary)' }}
+    >
+      <h3 className="text-[14px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+        {app.name}
+      </h3>
+      <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+        {app.description}
+      </p>
+    </Link>
   )
 }
