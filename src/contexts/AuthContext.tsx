@@ -90,9 +90,6 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       const ok = processToken(savedToken)
       if (!ok) {
         localStorage.removeItem('st-agent-token')
-      } else if (window.location.pathname !== '/') {
-        window.location.href = '/'
-        return
       }
     }
     setLoading(false)

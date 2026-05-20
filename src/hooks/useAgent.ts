@@ -8,11 +8,17 @@ const STEP_LABELS: Record<string, string> = {
   classify: '요청 분석',
   branch: '브랜치 준비',
   figma: '피그마 분석',
+  fetch_figma: '피그마 분석',
   image: '이미지 분석',
+  analyze_image: '이미지 분석',
   docs: '스펙 문서 확인',
+  check_docs: '스펙 문서 확인',
   analyze: '파일 분석',
+  analyze_files: '파일 분석',
   codegen: '코드 수정',
+  generate_code: '코드 수정',
   build: '빌드 검증',
+  verify: '검증',
   push: '커밋 & 푸시',
   deploy: '배포',
 }
@@ -115,11 +121,18 @@ export function useAgent() {
           }
 
           if (msg.type === 'stream_end') {
-            progressMsgId = add({
-              type: 'progress',
-              content: '',
-              progress: [],
-            })
+            // plan 이벤트가 이미 progress 메시지를 만들었으면 중복 생성 스킵
+            if (progressMsgId === botMsgId) {
+              const messages = store.getState().conversationMessages[conversationId] || []
+              const currentBotMsg = messages.find((m) => m.id === botMsgId)
+              if (currentBotMsg?.type === 'bot' && currentBotMsg.content) {
+                progressMsgId = add({
+                  type: 'progress',
+                  content: '',
+                  progress: [],
+                })
+              }
+            }
           }
 
           if (msg.type === 'plan') {
@@ -139,13 +152,10 @@ export function useAgent() {
           }
 
           if (msg.type === 'progress' || msg.type === 'status') {
-            const { step, state, ...rest } = msg.data
+            const { step, state } = msg.data
             if (step === 'classify') return
             const label = STEP_LABELS[step] || step
-            const detailParts = Object.entries(rest)
-              .filter(([k]) => !['step', 'state'].includes(k))
-              .map(([, v]) => String(v))
-            const detail = detailParts.length > 0 ? detailParts.join(', ') : undefined
+            const detail: string | undefined = undefined
 
             // stream_end가 아직 안 왔으면 (progressMsgId === botMsgId이고 botMsgId가 bot 타입이면)
             // 새 progress 메시지 자동 생성

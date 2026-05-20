@@ -12,7 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
       </AuthProvider>
       <Toaster
-        position="bottom-right"
+        position="top-right"
         toastOptions={{
           style: {
             background: 'var(--bg-card)',
