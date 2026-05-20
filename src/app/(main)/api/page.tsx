@@ -80,6 +80,11 @@ interface AuthState {
   user: string
 }
 
+type TryResponse =
+  | { kind: 'json'; status: number; ok: boolean; body: unknown }
+  | { kind: 'download'; status: number; ok: boolean; filename: string; size: number; contentType: string }
+  | { kind: 'empty'; status: number; ok: boolean }
+
 interface LoginEndpoint {
   path: string
   method: HttpMethod
@@ -234,8 +239,73 @@ function appendPath(baseUrl: string, path: string): string {
 function getPreferredMedia(content: Record<string, MediaType> | undefined): [string, MediaType] | null {
   if (!content) return null
   if (content['application/json']) return ['application/json', content['application/json']]
+  if (content['multipart/form-data']) return ['multipart/form-data', content['multipart/form-data']]
   const first = Object.entries(content)[0]
   return first || null
+}
+
+function schemaProps(schema: OpenApiSchema | undefined, spec: OpenApiSpec): Record<string, OpenApiSchema> {
+  return effective(schema, spec).properties || {}
+}
+
+function isFileSchema(schema: OpenApiSchema | undefined, spec: OpenApiSpec): boolean {
+  const eff = effective(schema, spec)
+  if (eff.type === 'string' && eff.format === 'binary') return true
+  if (eff.type === 'array') return isFileSchema(eff.items, spec)
+  return false
+}
+
+function requestMedia(op: Operation): [string, MediaType] | null {
+  const content = op.requestBody?.content
+  if (!content) return null
+  if (content['application/json']) return ['application/json', content['application/json']]
+  if (content['multipart/form-data']) return ['multipart/form-data', content['multipart/form-data']]
+  if (content['application/x-www-form-urlencoded']) return ['application/x-www-form-urlencoded', content['application/x-www-form-urlencoded']]
+  return Object.entries(content)[0] || null
+}
+
+function responseMediaTypes(op: Operation): string[] {
+  return Object.values(op.responses || {}).flatMap((res) => Object.keys(res.content || {}))
+}
+
+function shouldDownloadResponse(contentType: string, op: Operation): boolean {
+  const normalized = contentType.toLowerCase()
+  const declared = responseMediaTypes(op).join(' ').toLowerCase()
+  const haystack = `${normalized} ${declared}`
+  return (
+    haystack.includes('octet-stream') ||
+    haystack.includes('text/csv') ||
+    haystack.includes('application/csv') ||
+    haystack.includes('spreadsheet') ||
+    haystack.includes('excel') ||
+    haystack.includes('pdf') ||
+    haystack.includes('zip') ||
+    haystack.includes('image/') ||
+    haystack.includes('application/vnd')
+  )
+}
+
+function filenameFromResponse(res: Response, path: string): string {
+  const disposition = res.headers.get('content-disposition') || ''
+  const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utfMatch?.[1]) return decodeURIComponent(utfMatch[1])
+  const plainMatch = disposition.match(/filename="?([^"]+)"?/i)
+  if (plainMatch?.[1]) return plainMatch[1]
+  const last = path.split('/').filter(Boolean).pop() || 'download'
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('text/csv') && !last.includes('.')) return `${last}.csv`
+  return last
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 function findLoginEndpoint(project: ApiProject, spec: OpenApiSpec | null): LoginEndpoint | null {
@@ -546,19 +616,25 @@ function TryItPanel({
   const { op, path, method } = endpoint
   const baseUrl = resolveBaseUrl(project, spec)
   const params = op.parameters || []
-  const reqSchema =
-    op.requestBody?.content?.['application/json']?.schema ||
-    (op.requestBody?.content ? Object.values(op.requestBody.content)[0]?.schema : undefined)
+  const reqMedia = requestMedia(op)
+  const reqMediaType = reqMedia?.[0] || null
+  const reqSchema = reqMedia?.[1].schema
+  const reqProps = useMemo(() => schemaProps(reqSchema, spec), [reqSchema, spec])
+  const requiredFields = useMemo(() => new Set(effective(reqSchema, spec).required || []), [reqSchema, spec])
 
   const [paramVals, setParamVals] = useState<Record<string, string>>({})
   const [body, setBody] = useState<string>(() =>
-    reqSchema ? JSON.stringify(genExample(reqSchema, spec), null, 2) : '',
+    reqSchema && reqMediaType === 'application/json' ? JSON.stringify(genExample(reqSchema, spec), null, 2) : '',
   )
+  const [formVals, setFormVals] = useState<Record<string, string>>({})
+  const [fileVals, setFileVals] = useState<Record<string, FileList | null>>({})
   const [sending, setSending] = useState(false)
-  const [response, setResponse] = useState<{ status: number; ok: boolean; body: unknown } | null>(null)
+  const [response, setResponse] = useState<TryResponse | null>(null)
   const [errorText, setErrorText] = useState<string | null>(null)
 
   const setParam = (name: string, v: string) => setParamVals((p) => ({ ...p, [name]: v }))
+  const setForm = (name: string, v: string) => setFormVals((p) => ({ ...p, [name]: v }))
+  const setFiles = (name: string, files: FileList | null) => setFileVals((p) => ({ ...p, [name]: files }))
 
   async function send() {
     setErrorText(null)
@@ -579,8 +655,8 @@ function TryItPanel({
 
     if (token) headers.Authorization = `Bearer ${token}`
 
-    let bodyToSend: string | undefined
-    if (reqSchema && body.trim()) {
+    let bodyToSend: BodyInit | undefined
+    if (reqSchema && reqMediaType === 'application/json' && body.trim()) {
       try {
         JSON.parse(body)
       } catch {
@@ -589,17 +665,66 @@ function TryItPanel({
       }
       headers['Content-Type'] = 'application/json'
       bodyToSend = body
+    } else if (reqSchema && reqMediaType === 'multipart/form-data') {
+      const form = new FormData()
+      for (const [name, schema] of Object.entries(reqProps)) {
+        if (isFileSchema(schema, spec)) {
+          const files = fileVals[name]
+          if ((!files || files.length === 0) && requiredFields.has(name)) {
+            toast.error(`${name} 파일을 선택해 주세요`)
+            return
+          }
+          Array.from(files || []).forEach((file) => form.append(name, file))
+        } else {
+          const value = formVals[name]
+          if (!value && requiredFields.has(name)) {
+            toast.error(`${name} 값을 입력해 주세요`)
+            return
+          }
+          if (value !== undefined && value !== '') form.append(name, value)
+        }
+      }
+      bodyToSend = form
+    } else if (reqSchema && reqMediaType === 'application/x-www-form-urlencoded') {
+      const form = new URLSearchParams()
+      for (const name of Object.keys(reqProps)) {
+        const value = formVals[name]
+        if (!value && requiredFields.has(name)) {
+          toast.error(`${name} 값을 입력해 주세요`)
+          return
+        }
+        if (value !== undefined && value !== '') form.set(name, value)
+      }
+      headers['Content-Type'] = 'application/x-www-form-urlencoded'
+      bodyToSend = form
     }
 
     setSending(true)
     try {
       const res = await fetch(url, { method: method.toUpperCase(), headers, body: bodyToSend })
+      const contentType = res.headers.get('content-type') || ''
+      const disposition = res.headers.get('content-disposition') || ''
+      if (res.ok && (disposition || shouldDownloadResponse(contentType, op))) {
+        const blob = await res.blob()
+        const filename = filenameFromResponse(res, path)
+        downloadBlob(blob, filename)
+        setResponse({ kind: 'download', status: res.status, ok: res.ok, filename, size: blob.size, contentType })
+        toast.success(`${res.status} 다운로드 시작`)
+        return
+      }
+
       const text = await res.text()
+      if (!text) {
+        setResponse({ kind: 'empty', status: res.status, ok: res.ok })
+        if (res.ok) toast.success(`${res.status} ${res.statusText || 'OK'}`)
+        else toast.error(`${res.status} ${res.statusText || 'Error'}`)
+        return
+      }
       let parsed: unknown = text
       try {
         parsed = JSON.parse(text)
       } catch {}
-      setResponse({ status: res.status, ok: res.ok, body: parsed })
+      setResponse({ kind: 'json', status: res.status, ok: res.ok, body: parsed })
       if (res.ok) toast.success(`${res.status} ${res.statusText || 'OK'}`)
       else toast.error(`${res.status} ${res.statusText || 'Error'}`)
     } catch (e) {
@@ -645,7 +770,7 @@ function TryItPanel({
       })}
 
       {/* 요청 바디 */}
-      {reqSchema && (
+      {reqSchema && reqMediaType === 'application/json' && (
         <div className="mt-4">
           <SectionTitle>Request Body (JSON)</SectionTitle>
           <textarea
@@ -661,6 +786,78 @@ function TryItPanel({
               resize: 'vertical',
             }}
           />
+        </div>
+      )}
+
+      {reqSchema && reqMediaType === 'multipart/form-data' && (
+        <div className="mt-4">
+          <SectionTitle>Form Data</SectionTitle>
+          <div className="space-y-2">
+            {Object.entries(reqProps).map(([name, schema]) => {
+              const required = requiredFields.has(name)
+              const file = isFileSchema(schema, spec)
+              return (
+                <div key={name} className="flex items-start gap-2">
+                  <label className="text-[12px] font-mono w-36 shrink-0 flex items-center gap-1 pt-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    {name}
+                    {required && <span className="text-[10px]" style={{ color: 'var(--accent-red)' }}>*</span>}
+                  </label>
+                  {file ? (
+                    <input
+                      type="file"
+                      multiple={effective(schema, spec).type === 'array'}
+                      onChange={(e) => setFiles(name, e.currentTarget.files)}
+                      className="flex-1 min-w-0 text-[12px] rounded-md px-2.5 py-1.5 outline-none"
+                      style={{
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-secondary)',
+                        color: 'var(--text-primary)',
+                      }}
+                    />
+                  ) : (
+                    <input
+                      value={formVals[name] || ''}
+                      onChange={(e) => setForm(name, e.target.value)}
+                      placeholder={typeLabel(schema)}
+                      className="flex-1 min-w-0 text-[12px] rounded-md px-2.5 py-1.5 outline-none font-mono"
+                      style={{
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-secondary)',
+                        color: 'var(--text-primary)',
+                      }}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {reqSchema && reqMediaType === 'application/x-www-form-urlencoded' && (
+        <div className="mt-4">
+          <SectionTitle>Form URL Encoded</SectionTitle>
+          <div className="space-y-2">
+            {Object.entries(reqProps).map(([name, schema]) => (
+              <div key={name} className="flex items-center gap-2">
+                <label className="text-[12px] font-mono w-36 shrink-0 flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                  {name}
+                  {requiredFields.has(name) && <span className="text-[10px]" style={{ color: 'var(--accent-red)' }}>*</span>}
+                </label>
+                <input
+                  value={formVals[name] || ''}
+                  onChange={(e) => setForm(name, e.target.value)}
+                  placeholder={typeLabel(schema)}
+                  className="flex-1 min-w-0 text-[12px] rounded-md px-2.5 py-1.5 outline-none font-mono"
+                  style={{
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-secondary)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -688,7 +885,7 @@ function TryItPanel({
       {(response || errorText) && (
         <div className="mt-4">
           <SectionTitle>Response</SectionTitle>
-          {response && (
+          {response?.kind === 'json' && (
             <>
               <div className="flex items-center gap-2 mb-1.5">
                 <span
@@ -703,6 +900,24 @@ function TryItPanel({
               </div>
               <JsonBlock value={response.body} />
             </>
+          )}
+          {response?.kind === 'download' && (
+            <div
+              className="text-[12px] rounded-md p-3"
+              style={{
+                background: 'var(--accent-emerald-bg)',
+                border: '1px solid var(--accent-emerald-border)',
+                color: 'var(--accent-emerald)',
+              }}
+            >
+              {response.status} · {response.filename} 다운로드 요청 완료
+              {response.size > 0 ? ` (${Math.ceil(response.size / 1024)}KB)` : ''}
+            </div>
+          )}
+          {response?.kind === 'empty' && (
+            <div className="text-[12px] font-mono" style={{ color: response.ok ? 'var(--accent-emerald)' : 'var(--accent-red)' }}>
+              {response.status} · empty response
+            </div>
           )}
           {errorText && (
             <div
@@ -782,7 +997,10 @@ function EndpointCard({
       </button>
 
       {open && (
-        <div className="px-4 pb-5 pt-1" style={{ borderTop: '1px solid var(--border-secondary)' }}>
+        <div
+          className="px-4 pb-5 pt-1 overflow-y-auto overscroll-contain"
+          style={{ borderTop: '1px solid var(--border-secondary)', maxHeight: 'min(68vh, 720px)' }}
+        >
           <div className="flex items-start gap-3 mt-3">
             <div className="flex-1 min-w-0">
               {op.description && (
