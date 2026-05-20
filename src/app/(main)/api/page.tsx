@@ -803,17 +803,44 @@ function TryItPanel({
                     {required && <span className="text-[10px]" style={{ color: 'var(--accent-red)' }}>*</span>}
                   </label>
                   {file ? (
-                    <input
-                      type="file"
-                      multiple={effective(schema, spec).type === 'array'}
-                      onChange={(e) => setFiles(name, e.currentTarget.files)}
-                      className="flex-1 min-w-0 text-[12px] rounded-md px-2.5 py-1.5 outline-none"
+                    <label
+                      className="flex-1 min-w-0 flex items-center gap-2 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors"
                       style={{
                         background: 'var(--bg-input)',
                         border: '1px solid var(--border-secondary)',
                         color: 'var(--text-primary)',
                       }}
-                    />
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-hover)'
+                        e.currentTarget.style.borderColor = 'var(--border-hover)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-input)'
+                        e.currentTarget.style.borderColor = 'var(--border-secondary)'
+                      }}
+                    >
+                      <input
+                        type="file"
+                        multiple={effective(schema, spec).type === 'array'}
+                        onChange={(e) => setFiles(name, e.currentTarget.files)}
+                        className="sr-only"
+                      />
+                      <span
+                        className="text-[12px] font-medium rounded px-2 py-0.5 shrink-0"
+                        style={{
+                          color: 'var(--accent-blue)',
+                          background: 'var(--accent-blue-bg)',
+                          border: '1px solid var(--accent-blue-border)',
+                        }}
+                      >
+                        파일 선택
+                      </span>
+                      <span className="text-[12px] truncate" style={{ color: 'var(--text-tertiary)' }}>
+                        {fileVals[name]?.length
+                          ? Array.from(fileVals[name] || []).map((selected) => selected.name).join(', ')
+                          : '선택된 파일 없음'}
+                      </span>
+                    </label>
                   ) : (
                     <input
                       value={formVals[name] || ''}
