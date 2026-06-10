@@ -83,7 +83,7 @@ export default function ChannelMappingPage() {
       })
       if (!res.ok) {
         const { error } = await res.json().catch(() => ({ error: '저장 실패' }))
-        throw new Error(error)
+        throw new Error(error || '저장 실패')
       }
       setDirty(false)
       toast.success('저장했어요 — 다음 월요일 발행부터 반영됩니다')
@@ -111,7 +111,7 @@ export default function ChannelMappingPage() {
             onClick={save}
             disabled={!dirty || saving}
             className="text-[13px] font-medium rounded-md px-3.5 py-1.5 cursor-pointer disabled:cursor-default disabled:opacity-40"
-            style={{ color: 'white', background: 'var(--accent-emerald, #10b981)' }}
+            style={{ color: 'white', background: 'var(--accent-emerald)' }}
           >
             {saving ? '저장 중…' : '변경사항 저장'}
           </button>
@@ -169,7 +169,7 @@ export default function ChannelMappingPage() {
                 <button
                   onClick={() => update((p) => ({ ...p, teams: p.teams.filter((_, i) => i !== ti) }))}
                   className="text-[12px] cursor-pointer px-1.5"
-                  style={{ color: 'var(--accent-red, #ef4444)' }}
+                  style={{ color: 'var(--accent-red)' }}
                 >
                   팀 삭제
                 </button>
@@ -238,7 +238,7 @@ function ChannelPicker({
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
-  const filtered = channels.filter((c) => c.name.includes(query.toLowerCase())).slice(0, 30)
+  const filtered = channels.filter((c) => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 30)
   const selected = new Set(selectedIds)
 
   return (
