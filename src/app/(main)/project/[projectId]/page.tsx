@@ -2,6 +2,7 @@
 
 import { use, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { getApp } from '@/lib/apps'
 
 export default function ProjectIndexPage({
   params,
@@ -12,7 +13,8 @@ export default function ProjectIndexPage({
   const router = useRouter()
 
   useEffect(() => {
-    router.replace(`/project/${projectId}/agent`)
+    const firstTool = getApp(projectId)?.supportedTools[0] ?? 'agent'
+    router.replace(`/project/${projectId}/${firstTool}`)
   }, [projectId, router])
 
   return null

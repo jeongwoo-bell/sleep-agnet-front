@@ -1,7 +1,7 @@
 // 앱/프로젝트 config
 // 지금은 하드코딩, 추후 DB로 이동 예정
 
-export type ToolId = 'agent' | 'logs'
+export type ToolId = 'agent' | 'logs' | 'channels'
 
 export interface App {
   id: string
@@ -18,11 +18,18 @@ export const APPS: App[] = [
     description: 'SleepThera 랜딩페이지',
     supportedTools: ['agent', 'logs'],
   },
+  {
+    id: 'bell-news',
+    name: '벨생정보통',
+    description: '주간 슬랙 다이제스트 — 채널 매핑 관리',
+    supportedTools: ['channels'],
+  },
 ]
 
 export const ALL_TOOLS: { id: ToolId; label: string }[] = [
   { id: 'agent', label: 'Agent' },
   { id: 'logs', label: 'Logs' },
+  { id: 'channels', label: '채널 매핑' },
 ]
 
 export function getApp(id: string): App | undefined {
