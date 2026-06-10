@@ -17,6 +17,7 @@ export default function ChannelMappingPage() {
   const [slackChannels, setSlackChannels] = useState<SlackChannel[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [dirty, setDirty] = useState(false)
 
   const headers = useMemo(
@@ -94,6 +95,25 @@ export default function ChannelMappingPage() {
     }
   }
 
+  // 즉시 발행 — 현재 시점 기준 직전 7일 다이제스트 (서버에서 cron과 동일 스크립트 실행, ~1분 소요)
+  const publishNow = async () => {
+    if (dirty) return void toast.error('저장하지 않은 변경이 있어요 — 먼저 저장해주세요')
+    if (!window.confirm(`지금 #${config.targetChannel?.name ?? '발행 채널'}에 다이제스트를 발행할까요?`)) return
+    setPublishing(true)
+    try {
+      const res = await fetch(`${API_URL}/bell-news/publish`, { method: 'POST', headers })
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: '발행 실패' }))
+        throw new Error(error || '발행 실패')
+      }
+      toast.success(`발행 완료 — #${config.targetChannel?.name ?? ''} 채널을 확인해보세요`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '발행 실패')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
@@ -107,14 +127,24 @@ export default function ChannelMappingPage() {
       <div className="max-w-2xl mx-auto px-6 py-8">
         <div className="flex items-start justify-between mb-1">
           <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>채널 매핑</h1>
-          <button
-            onClick={save}
-            disabled={!dirty || saving}
-            className="text-[13px] font-medium rounded-md px-3.5 py-1.5 cursor-pointer disabled:cursor-default disabled:opacity-40"
-            style={{ color: 'white', background: 'var(--accent-emerald)' }}
-          >
-            {saving ? '저장 중…' : '변경사항 저장'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={publishNow}
+              disabled={publishing || saving}
+              className="text-[13px] font-medium rounded-md px-3.5 py-1.5 cursor-pointer disabled:cursor-default disabled:opacity-40"
+              style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-secondary)' }}
+            >
+              {publishing ? '발행 중… (~1분)' : '즉시 발행'}
+            </button>
+            <button
+              onClick={save}
+              disabled={!dirty || saving}
+              className="text-[13px] font-medium rounded-md px-3.5 py-1.5 cursor-pointer disabled:cursor-default disabled:opacity-40"
+              style={{ color: 'white', background: 'var(--accent-emerald)' }}
+            >
+              {saving ? '저장 중…' : '변경사항 저장'}
+            </button>
+          </div>
         </div>
         <p className="text-[13px] mb-6" style={{ color: 'var(--text-tertiary)' }}>
           매주 월요일 09:00에 아래 채널들을 집계해 #발행 채널에 올립니다. 새로 추가한 채널은 발행 시 봇이 자동 입장해요.
